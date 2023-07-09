@@ -1,0 +1,92 @@
+﻿<Window x:Name="WindowMain" x:Class="WLO_Translator_WPF.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:scintilla="https://github.com/fernandreu/ScintillaNET.WPF"
+        mc:Ignorable="d"
+        Title="WLO Translator" Height="568.156" Width="1012.43">
+    <Window.Resources>
+        <BitmapImage x:Key="i0" x:Name="StoreAllItems" UriSource="Images/StoreAllItems.png"></BitmapImage>
+    </Window.Resources>
+    <Grid Background="#FFEAEAEA">
+        <Grid Margin="0,60,0,0">
+            <Grid Margin="30,15,30,30" Background="#FFFBFBFB">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="31*" MinWidth="200"></ColumnDefinition>
+                    <ColumnDefinition Width="31*"></ColumnDefinition>
+                    <ColumnDefinition Width="18*" MinWidth="200"></ColumnDefinition>
+                </Grid.ColumnDefinitions>
+                <Button x:Name="ButtonOpenFileToTranslate" Content="Open File" Grid.Column="0" HorizontalAlignment="Left" Margin="15,10,0,0" VerticalAlignment="Top" Width="112" Click="ButtonOpenFileToTranslate_Click" Foreground="Black" Height="23"/>
+                <!--<RichTextBox x:Name="scintillaTextBox" Margin="15,56,0,30" VerticalScrollBarVisibility="Auto" Grid.Column="0" FontFamily="Courier New">
+                    <FlowDocument>
+                        <Paragraph>
+                            <Run Text=""/>
+                        </Paragraph>
+                    </FlowDocument>
+                </RichTextBox>-->
+                <scintilla:ScintillaWPF x:Name="scintillaTextBox" Margin="15,56,0,30" Grid.Column="0" Background="#FFEAEAEA" WrapMode="Char" ReadOnly="True"/>
+
+                <GridSplitter Grid.Column="1" HorizontalAlignment="Left" Width="10" BorderBrush="#FFF0F0F0" BorderThickness="0" Margin="0" Background="#FFEAEAEA"/>
+                <Label x:Name="LabelFoundItems" Content="Found Items" HorizontalAlignment="Left" VerticalAlignment="Top" Grid.Column="1" Margin="10,30,0,0" Height="26" Width="76"/>
+                <ListBox x:Name="ListBoxFoundItems" Margin="10,56,5,30" Grid.Column="1" FontFamily="Courier New"/>
+                <Button x:Name="ButtonTransferAllItemsToStoredItems" Grid.Column="1" Margin="0,10,10,0" VerticalAlignment="Top" HorizontalAlignment="Right" Width="110" Height="23" Click="ButtonTransferAllItemsToStoredItems_Click">
+                    <StackPanel Orientation="Horizontal">
+                        <Image Source="Images/StoreAllItems.png" Stretch="Fill" Margin="3"/>
+                        <TextBlock>Store All Items</TextBlock>
+                    </StackPanel>
+                </Button>
+
+                <GridSplitter Grid.Column="2" HorizontalAlignment="Left" Width="10" BorderBrush="#FFF0F0F0" BorderThickness="0" Margin="-5,0,0,0" Background="#FFEAEAEA"></GridSplitter>
+                <Label x:Name="LabelStoredItems" Content="Stored Items" Margin="10,30,0,0" VerticalAlignment="Top" Grid.Column="2" Height="26" HorizontalAlignment="Left" Width="92"/>
+                <ListBox x:Name="ListBoxStoredItems" Margin="5,56,15,30" Grid.Column="2" FontFamily="Courier New"/>
+                <Button x:Name="ButtonClearStoredItems" Grid.Column="2" Margin="0,10,15,0" VerticalAlignment="Top" HorizontalAlignment="Right" Width="122" Height="23" Click="ButtonClearStoredItems_Click">
+                    <StackPanel Orientation="Horizontal">
+                        <Image Source="Images/StoreAllItems.png" Stretch="Fill" Margin="3"/>
+                        <TextBlock>Clear Stored Items</TextBlock>
+                    </StackPanel>
+                </Button>
+                <Label x:Name="LabelFileToTranslatePath" Content="" HorizontalAlignment="Left" Margin="158,7,0,0" VerticalAlignment="Top"/>
+            </Grid>
+            <Label x:Name="LabelSaved" Content="" Grid.Column="0" HorizontalAlignment="Left" Width="92" Height="26" VerticalAlignment="Bottom"/>
+        </Grid>
+        <Menu Height="25" VerticalAlignment="Top" BorderBrush="#FFB9B9B9" BorderThickness="0" Background="WhiteSmoke">
+            <MenuItem Header="File">
+                <MenuItem x:Name="MenuItemOpen" Header="Open" Click="MenuItemOpen_Click"/>
+                <Separator/>
+                <MenuItem x:Name="MenuItemSave" Header="Save" Click="MenuItemSave_Click"/>
+                <!--<MenuItem x:Name="MenuItemSaveAs" Header="Save As..." Click="MenuItemSave_Click"/>-->
+                <Separator/>
+                <MenuItem x:Name="MenuItemExportFile" Header="Export File" Click="MenuItemExportFile_Click"/>
+                <Separator/>
+                <MenuItem x:Name="MenuItemExit" Header="Exit" Click="MenuItemExit_Click"/>
+            </MenuItem>
+            <!--<MenuItem Header="Edit"></MenuItem>-->
+            <MenuItem Header="Help">
+                <MenuItem x:Name="MenuItemAbout" Header="About WLO Translator" Click="MenuItemAbout_Click"></MenuItem>
+            </MenuItem>
+        </Menu>
+        <ToolBar Height="35" Margin="0,25,0,0" VerticalAlignment="Top" Background="#FFF3F3F3">
+            <ComboBox x:Name="ComboBoxSelectedEncoding" Margin="0,5" Width="155" SelectedIndex="0" SelectionChanged="ComboBoxSelectedEncoding_SelectionChanged">
+                <ComboBox.Background>
+                    <LinearGradientBrush EndPoint="0,1" StartPoint="0,0">
+                        <GradientStop Color="#FFF0F0F0" Offset="0"/>
+                        <GradientStop Color="White" Offset="1"/>
+                    </LinearGradientBrush>
+                </ComboBox.Background>
+                <ComboBoxItem Content="ANSI"/>
+                <ComboBoxItem Content="Unicode"/>
+                <ComboBoxItem Content="UTF8"/>
+                <ComboBoxItem Content="GB2312"/>
+                <ComboBoxItem Content="BIG5"/>
+            </ComboBox>
+            <Button x:Name="ButtonBeginTranslate" Click="ButtonBeginTranslate_Click">
+                <StackPanel Orientation="Horizontal">
+                    <Image Source="Images/StoreAllItems.png" Stretch="Fill" Margin="3"/>
+                    <TextBlock VerticalAlignment="Center">Translate</TextBlock>
+                </StackPanel>
+            </Button>
+            <TextBox x:Name="TextBoxItemSearchBar" Height="30" TextWrapping="Wrap" VerticalAlignment="Top" Width="184" AutomationProperties.HelpText="Search in items" TextChanged="TextBoxItemSearchBar_TextChanged"/>
+        </ToolBar>
+    </Grid>
+</Window>
