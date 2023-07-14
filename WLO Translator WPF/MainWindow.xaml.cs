@@ -29,9 +29,6 @@ namespace WLO_Translator_WPF
         //private JoinableTaskCollection  mJoinableTaskCollection;
         //private JoinableTaskFactory     mJoinableTaskFactory;
 
-        private List<Item>              mStoredItemsWhileSearching;
-        private List<Item>              mFoundItemsWhileSearching;
-
         public MainWindow()
         {
             InitializeComponent();
@@ -43,7 +40,8 @@ namespace WLO_Translator_WPF
             //scintillaTextBox.Scintilla.Width = 500;
 
             mFileManager = new FileManager(Dispatcher, ref scintillaTextBox, ref ListBoxFoundItems, ref ListBoxStoredItems,
-                ButtonJumpToWholeItem_Click, ButtonJumpToID_Click, ButtonJumpToName_Click, ButtonJumpToDescription_Click);
+                ButtonUpdateItemBasedOnNameLength_Click, ButtonJumpToWholeItem_Click, ButtonJumpToID_Click, ButtonJumpToName_Click,
+                ButtonJumpToDescription_Click);
         }
 
         private void ButtonOpenFileToTranslate_Click(object sender, RoutedEventArgs e)
@@ -55,6 +53,11 @@ namespace WLO_Translator_WPF
                 LabelFileToTranslatePath.Content = mOpenFileDialog.FileName;
                 mFileManager.OpenFileToTranslate(mOpenFileDialog.FileName);
             }
+        }
+
+        private void ButtonUpdateItemBasedOnNameLength_Click(object sender, RoutedEventArgs e)
+        {
+            mFileManager.UpdateItemInfoBasedOnNewNameLength((sender as Button).Tag as Item);
         }
 
         private void ButtonJumpToWholeItem_Click(object sender, System.Windows.RoutedEventArgs e)
@@ -262,62 +265,68 @@ namespace WLO_Translator_WPF
 
         private void TextBoxItemSearchBar_TextChanged(object sender, TextChangedEventArgs e)
         {
-            string text = ((TextBox)sender).Text;
+            ItemStorageManager.UpdateVisableItems(ref ListBoxFoundItems, ref ListBoxStoredItems,
+                TextBoxItemSearchBar.Text, CheckBoxShowItemsWithBadCharsOnly.IsChecked.Value);
+            //// Only allow searches if CheckBoxShowItemsWithBadCharsOnly is not checked
+            //if (CheckBoxShowItemsWithBadCharsOnly.IsChecked.Value)
+            //    return;
 
-            // Don't allow searches for too small words
-            if (text.Length != 0 && text.Length < 2)
-                return;
+            //string text = ((TextBox)sender).Text;
 
-            List<Item> itemsStored  = new List<Item>();
-            List<Item> itemsFound   = new List<Item>();
+            //// Don't allow searches for too small words
+            //if (text.Length != 0 && text.Length < 2)
+            //    return;
 
-            if (text == "" && mStoredItemsWhileSearching != null)
-            {
-                // Add the stored items back
-                itemsStored = mStoredItemsWhileSearching;
-                itemsFound  = mFoundItemsWhileSearching;
-                mStoredItemsWhileSearching  = null;
-                mFoundItemsWhileSearching   = null;
-            }
-            else
-            {
-                // Add only the found items from the search and temporary store the stored items
-                if (mStoredItemsWhileSearching == null)
-                {
-                    mStoredItemsWhileSearching  = ListBoxStoredItems.Items.OfType<Item>().ToList();
-                    mFoundItemsWhileSearching   = ListBoxFoundItems.Items.OfType<Item>().ToList();
-                }
+            //List<Item> itemsStored  = new List<Item>();
+            //List<Item> itemsFound   = new List<Item>();
 
-                itemsStored = mStoredItemsWhileSearching.Where((Item item) =>
-                {
-                    return item.Name.Contains(text);
-                }).ToList();
+            //if (text == "" && mStoredItemsWhileSearching != null)
+            //{
+            //    // Add the stored items back
+            //    itemsStored = mStoredItemsWhileSearching;
+            //    itemsFound  = mFoundItemsWhileSearching;
+            //    mStoredItemsWhileSearching  = null;
+            //    mFoundItemsWhileSearching   = null;
+            //}
+            //else
+            //{
+            //    // Add only the found items from the search and temporary store the stored items
+            //    if (mStoredItemsWhileSearching == null)
+            //    {
+            //        mStoredItemsWhileSearching  = ListBoxStoredItems.Items.OfType<Item>().ToList();
+            //        mFoundItemsWhileSearching   = ListBoxFoundItems.Items.OfType<Item>().ToList();
+            //    }
 
-                foreach (Item itemStored in itemsStored)
-                {
-                    Item itemFound = mFoundItemsWhileSearching.FirstOrDefault((Item item) =>
-                    {
-                        return item.ID[0] == itemStored.ID[0] && item.ID[1] == itemStored.ID[1];
-                    });
+            //    itemsStored = mStoredItemsWhileSearching.Where((Item item) =>
+            //    {
+            //        return item.Name.Contains(text);
+            //    }).ToList();
 
-                    if (itemFound != null)
-                        itemsFound.Add(itemFound);
-                }
-            }
+            //    foreach (Item itemStored in itemsStored)
+            //    {
+            //        Item itemFound = mFoundItemsWhileSearching.FirstOrDefault((Item item) =>
+            //        {
+            //            return item.ID[0] == itemStored.ID[0] && item.ID[1] == itemStored.ID[1];
+            //        });
 
-            ListBoxStoredItems.Items.Clear();
-            ListBoxFoundItems.Items.Clear();
-            foreach (Item itemCurrent in itemsStored)
-            {
-                ListBoxStoredItems.Items.Add(itemCurrent);
-            }
+            //        if (itemFound != null)
+            //            itemsFound.Add(itemFound);
+            //    }
+            //}
 
-            foreach (Item itemCurrent in itemsFound)
-            {
-                if (!ListBoxFoundItems.Items.Contains(itemCurrent))
-                    ListBoxFoundItems.Items.Add(itemCurrent);
-            }
-        }
+            //ListBoxStoredItems.Items.Clear();
+            //ListBoxFoundItems.Items.Clear();
+            //foreach (Item itemCurrent in itemsStored)
+            //{
+            //    ListBoxStoredItems.Items.Add(itemCurrent);
+            //}
+
+            //foreach (Item itemCurrent in itemsFound)
+            //{
+            //    if (!ListBoxFoundItems.Items.Contains(itemCurrent))
+            //        ListBoxFoundItems.Items.Add(itemCurrent);
+            //}
+        }        
 
         private void MenuItemExportFile_Click(object sender, RoutedEventArgs e)
         {
@@ -333,6 +342,12 @@ namespace WLO_Translator_WPF
                 return;
 
             File.WriteAllText(".\\testexportfile.dat", text, Encoding.GetEncoding(1252)/*Encoding.GetEncoding("big5")*/);
+        }
+
+        private void CheckBoxShowItemsWithBadCharsOnly_Click(object sender, RoutedEventArgs e)
+        {
+            ItemStorageManager.UpdateVisableItems(ref ListBoxFoundItems, ref ListBoxStoredItems,
+                TextBoxItemSearchBar.Text, CheckBoxShowItemsWithBadCharsOnly.IsChecked.Value);
         }
     }
 }

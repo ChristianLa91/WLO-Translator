@@ -24,6 +24,7 @@ namespace WLO_Translator_WPF
 
         private ScintillaWPF        mScintillaWPFTextBox;
 
+        private RoutedEventHandler  mRoutedEventHandlerButtonClickUpdateItem;
         private RoutedEventHandler  mRoutedEventHandlerButtonClickJumpToWholeItem;
         private RoutedEventHandler  mRoutedEventHandlerButtonClickJumpToID;
         private RoutedEventHandler  mRoutedEventHandlerButtonClickJumpToName;
@@ -49,13 +50,15 @@ namespace WLO_Translator_WPF
 
         public FileManager(Dispatcher mainWindowDispatcher, ref ScintillaWPF scintillaWPFTextBox,
             ref ListBox listBoxFoundItems, ref ListBox listBoxStoredItems,
-            RoutedEventHandler routedEventHandlerButtonClickJumpToWholeItem, RoutedEventHandler routedEventHandlerButtonClickJumpToID,
-            RoutedEventHandler routedEventHandlerButtonClickJumpToName, RoutedEventHandler routedEventHandlerButtonClickJumpToDescription)
+            RoutedEventHandler routedEventHandlerButtonClickUpdateItem, RoutedEventHandler routedEventHandlerButtonClickJumpToWholeItem,
+            RoutedEventHandler routedEventHandlerButtonClickJumpToID, RoutedEventHandler routedEventHandlerButtonClickJumpToName,
+            RoutedEventHandler routedEventHandlerButtonClickJumpToDescription)
         {
             mDispatcher             = mainWindowDispatcher;
             mScintillaWPFTextBox    = scintillaWPFTextBox;
             mListBoxFoundItems      = listBoxFoundItems;
             mListBoxStoredItems     = listBoxStoredItems;
+            mRoutedEventHandlerButtonClickUpdateItem        = routedEventHandlerButtonClickUpdateItem;
             mRoutedEventHandlerButtonClickJumpToWholeItem   = routedEventHandlerButtonClickJumpToWholeItem;
             mRoutedEventHandlerButtonClickJumpToID          = routedEventHandlerButtonClickJumpToID;
             mRoutedEventHandlerButtonClickJumpToName        = routedEventHandlerButtonClickJumpToName;
@@ -260,7 +263,8 @@ namespace WLO_Translator_WPF
                             // Store all found items in the ListBox
                             foreach (ItemData itemData in items)
                             {
-                                mListBoxStoredItems.Items.Add(itemData.ToItem(mRoutedEventHandlerButtonClickJumpToWholeItem,
+                                mListBoxStoredItems.Items.Add(itemData.ToItem(mRoutedEventHandlerButtonClickUpdateItem,
+                                    mRoutedEventHandlerButtonClickJumpToWholeItem,
                                     mRoutedEventHandlerButtonClickJumpToID,
                                     mRoutedEventHandlerButtonClickJumpToName,
                                     mRoutedEventHandlerButtonClickJumpToDescription));
@@ -411,7 +415,15 @@ namespace WLO_Translator_WPF
                         items.Add(currentItem);
                         itemInfoCollectionState = ItemInfoCollectionStates.FIND_DESCRIPTION_LENGHT;
 
-                        i += itemNameLength;
+                        i += itemNameLength;// + 2;
+                    }
+                    else if (itemInfoCollectionState == ItemInfoCollectionStates.FIND_DESCRIPTION_LENGHT)
+                    {
+                        i += Constants.AFTER_NAME_TO_DESCRIPTIONLENGTH_LENGTH - 1;
+
+                        itemDescriptionLength = bytes[i/* - zeroCounter*/];
+                        currentItem.DescriptionLengthPosition = i/* - zeroCounter*/;
+                        itemInfoCollectionState = ItemInfoCollectionStates.FIND_DESCRIPTION;
                     }
                     else if (itemInfoCollectionState == ItemInfoCollectionStates.FIND_DESCRIPTION)
                     {
@@ -452,20 +464,21 @@ namespace WLO_Translator_WPF
                         //++stopAtItem;
                     }
                 }
-                else if (currentByte == '\0')
-                {
-                    if (itemInfoCollectionState == ItemInfoCollectionStates.FIND_DESCRIPTION_LENGHT)
-                        ++zeroCounter;
+                //else if (currentByte == 'Ê' && TextManager.IsBytesEqualToString(bytes, i, 11, "ÊïÊïÊïÊïÊïÊ")/*'\0'*/)
+                //{
+                //    i += 11;
+                //    if (itemInfoCollectionState == ItemInfoCollectionStates.FIND_DESCRIPTION_LENGHT)
+                //        ++zeroCounter;
 
-                    if (itemInfoCollectionState == ItemInfoCollectionStates.FIND_DESCRIPTION_LENGHT && zeroCounter == 2)
-                    {
-                        itemDescriptionLength = bytes[i - zeroCounter];
-                        currentItem.DescriptionLengthPosition = i - zeroCounter;
-                        itemInfoCollectionState = ItemInfoCollectionStates.FIND_DESCRIPTION;
+                //    if (itemInfoCollectionState == ItemInfoCollectionStates.FIND_DESCRIPTION_LENGHT && zeroCounter == 2)
+                //    {
+                //        itemDescriptionLength = bytes[i/* - zeroCounter*/];
+                //        currentItem.DescriptionLengthPosition = i/* - zeroCounter*/;
+                //        itemInfoCollectionState = ItemInfoCollectionStates.FIND_DESCRIPTION;
 
-                        zeroCounter = 0;
-                    }
-                }
+                //        //zeroCounter = 0;
+                //    }
+                //}
 
                 if (report > 29999)
                 {
@@ -486,13 +499,35 @@ namespace WLO_Translator_WPF
                     // Store all found items in the ListBox
                     foreach (ItemData itemData in items)
                     {
-                        mListBoxFoundItems.Items.Add(itemData.ToItem(mRoutedEventHandlerButtonClickJumpToWholeItem,
+                        mListBoxFoundItems.Items.Add(itemData.ToItem(mRoutedEventHandlerButtonClickUpdateItem,
+                            mRoutedEventHandlerButtonClickJumpToWholeItem,
                             mRoutedEventHandlerButtonClickJumpToID,
                             mRoutedEventHandlerButtonClickJumpToName,
                             mRoutedEventHandlerButtonClickJumpToDescription));
                     }
                 }
             });
+        }
+
+        public void UpdateItemInfoBasedOnNewNameLength(Item item)
+        {
+            item.NameEndPosition            = item.NameStartPosition + item.Name.Length;
+            item.DescriptionLengthPosition  = item.NameEndPosition + Constants.AFTER_NAME_TO_DESCRIPTIONLENGTH_LENGTH;
+            int descriptionLength           = mOpenFileText[item.DescriptionLengthPosition];
+
+            // Find description
+            int i = item.DescriptionLengthPosition + 1;
+            char currentChar = mOpenFileText[i];
+            while (currentChar == '\0')
+            {
+                ++i;
+                currentChar = mOpenFileText[i];
+            }
+
+            //i++;
+            item.Description = TextManager.ReverseString(mOpenFileText.Substring(i, descriptionLength));
+            item.DescriptionStartPosition = i;
+            item.DescriptionEndPosition = i + descriptionLength - 1;
         }
 
         public void OpenFileToTranslate(string fileName)

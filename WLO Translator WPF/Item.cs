@@ -28,11 +28,13 @@ namespace WLO_Translator_WPF
         // TextBox Texts
         public string   TextBoxNameLengthText       { get; set; }
 
-        public Item ToItem(RoutedEventHandler routedEventHandlerButtonClickJumpToWholeItem, RoutedEventHandler routedEventHandlerButtonClickJumpToID,
-                           RoutedEventHandler routedEventHandlerButtonClickJumpToName, RoutedEventHandler routedEventHandlerButtonClickJumpToDescription)
+        public Item ToItem(RoutedEventHandler routedEventHandlerButtonClickUpdateItem, RoutedEventHandler routedEventHandlerButtonClickJumpToWholeItem,
+                           RoutedEventHandler routedEventHandlerButtonClickJumpToID, RoutedEventHandler routedEventHandlerButtonClickJumpToName,
+                           RoutedEventHandler routedEventHandlerButtonClickJumpToDescription)
         {
-            Item item = new Item(routedEventHandlerButtonClickJumpToWholeItem, routedEventHandlerButtonClickJumpToID,
-                            routedEventHandlerButtonClickJumpToName, routedEventHandlerButtonClickJumpToDescription);
+            Item item = new Item(routedEventHandlerButtonClickUpdateItem, routedEventHandlerButtonClickJumpToWholeItem,
+                            routedEventHandlerButtonClickJumpToID, routedEventHandlerButtonClickJumpToName,
+                            routedEventHandlerButtonClickJumpToDescription);
             item.Name                       = Name;
             item.ID                         = ID;
             item.Description                = Description;
@@ -63,12 +65,13 @@ namespace WLO_Translator_WPF
         private TextBlock           mTextBlockID;
         private TextBox             mTextBoxName;
         private TextBox             mTextBoxDescription;
-
+        private Button              mButtonUpdateItemBasedOnNameLength;
         private Button              mButtonJumpToWholeItem;
         private Button              mButtonJumpToID;
         private Button              mButtonJumpToName;
         private Button              mButtonJumpToDescription;
 
+        private RoutedEventHandler  mRoutedEventHandlerButtonClickUpdateItem;
         private RoutedEventHandler  mRoutedEventHandlerButtonClickJumpToWholeItem;
         private RoutedEventHandler  mRoutedEventHandlerButtonClickJumpToID;
         private RoutedEventHandler  mRoutedEventHandlerButtonClickJumpToName;
@@ -110,7 +113,7 @@ namespace WLO_Translator_WPF
             }
         }
 
-        private bool ContainsIllegalCharacter(string mName)
+        private bool ContainsIllegalChar(string mName)
         {
             foreach (char currentChar in mName)
             {
@@ -121,7 +124,7 @@ namespace WLO_Translator_WPF
             return false;
         }
 
-        private bool ContainsNoneNumberOrLetterCharacter(string mName)
+        private bool ContainsNoneNumberOrLetterChar(string mName)
         {
             foreach (char currentChar in mName)
             {
@@ -136,12 +139,17 @@ namespace WLO_Translator_WPF
         private void CheckIllegalChars(ref TextBox textBox)
         {
             string text = textBox.Text;//RichTextBoxGetText(ref textBox);
-            if (ContainsIllegalCharacter(text))
-                textBox.Background = System.Windows.Media.Brushes.Red;
-            else if (ContainsNoneNumberOrLetterCharacter(text))
-                textBox.Background = System.Windows.Media.Brushes.Orange;
+            if (ContainsIllegalChar(text))
+                textBox.Background = Brushes.Red;
+            else if (ContainsNoneNumberOrLetterChar(text))
+                textBox.Background = Brushes.Orange;
             else
-                textBox.Background = System.Windows.Media.Brushes.Transparent;
+                textBox.Background = Brushes.Transparent;
+        }
+
+        public bool TextBoxesContainsIllegalChars()
+        {
+            return ContainsIllegalChar(mTextBoxName.Text) || ContainsIllegalChar(mTextBoxDescription.Text);
         }
 
         // Positions
@@ -167,8 +175,9 @@ namespace WLO_Translator_WPF
         public Button       ButtonJumpToName            { get => mButtonJumpToName;         set => mButtonJumpToName        = value; }
         public Button       ButtonJumpToDescription     { get => mButtonJumpToDescription;  set => mButtonJumpToDescription = value; }
 
-        public Item(RoutedEventHandler routedEventHandlerButtonClickJumpToWholeItem, RoutedEventHandler routedEventHandlerButtonClickJumpToID,
-            RoutedEventHandler routedEventHandlerButtonClickJumpToName, RoutedEventHandler routedEventHandlerButtonClickJumpToDescription) : base()
+        public Item(RoutedEventHandler routedEventHandlerButtonClickUpdateItem, RoutedEventHandler routedEventHandlerButtonClickJumpToWholeItem,
+            RoutedEventHandler routedEventHandlerButtonClickJumpToID, RoutedEventHandler routedEventHandlerButtonClickJumpToName,
+            RoutedEventHandler routedEventHandlerButtonClickJumpToDescription) : base()
         {
             //mID                             = new int[2];
             mTextBlockNameLength                = new TextBlock()   { Text      = "??" };
@@ -178,21 +187,25 @@ namespace WLO_Translator_WPF
             mTextBoxDescription                 = new TextBox()     { MaxWidth  = 200, Width = 200 };
             mTextBoxDescription.TextChanged    += TextBoxDescription_TextChanged;
 
+            mButtonUpdateItemBasedOnNameLength  = new Button()      { Content   = "Update", Margin = new Thickness(0, 0, 10, 0) };
             mButtonJumpToWholeItem              = new Button()      { Content   = "Goto Item", Margin = new Thickness(0, 0, 10, 0) };
             mButtonJumpToID                     = new Button()      { Content   = "Goto" };
             mButtonJumpToName                   = new Button()      { Content   = "Goto" };
             mButtonJumpToDescription            = new Button()      { Content   = "Goto", Margin = new Thickness(10, 0, 0, 0) };
 
+            mButtonUpdateItemBasedOnNameLength.Click += routedEventHandlerButtonClickUpdateItem;
             mButtonJumpToWholeItem.Click       += routedEventHandlerButtonClickJumpToWholeItem;
             mButtonJumpToID.Click              += routedEventHandlerButtonClickJumpToID;
             mButtonJumpToName.Click            += routedEventHandlerButtonClickJumpToName;
             mButtonJumpToDescription.Click     += routedEventHandlerButtonClickJumpToDescription;
 
-            mButtonJumpToWholeItem.Tag          = this;
-            mButtonJumpToID.Tag                 = this;
-            mButtonJumpToName.Tag               = this;
-            mButtonJumpToDescription.Tag        = this;
+            mButtonUpdateItemBasedOnNameLength.Tag  = this;
+            mButtonJumpToWholeItem.Tag              = this;
+            mButtonJumpToID.Tag                     = this;
+            mButtonJumpToName.Tag                   = this;
+            mButtonJumpToDescription.Tag            = this;
 
+            mRoutedEventHandlerButtonClickUpdateItem        = routedEventHandlerButtonClickUpdateItem;
             mRoutedEventHandlerButtonClickJumpToWholeItem   = routedEventHandlerButtonClickJumpToWholeItem;
             mRoutedEventHandlerButtonClickJumpToID          = routedEventHandlerButtonClickJumpToID;
             mRoutedEventHandlerButtonClickJumpToName        = routedEventHandlerButtonClickJumpToName;
@@ -204,6 +217,8 @@ namespace WLO_Translator_WPF
                 Orientation = Orientation.Horizontal,
                 Children =
                 {
+                    mButtonUpdateItemBasedOnNameLength,
+
                     mButtonJumpToWholeItem,
 
                     new Label() { Content = "Length: " },
@@ -222,7 +237,7 @@ namespace WLO_Translator_WPF
                     mTextBoxDescription
                 }                
             };
-        }
+        }        
 
         public void SetEncoding(FontFamily fontFamily, Encoding encoding)
         {
@@ -301,8 +316,8 @@ namespace WLO_Translator_WPF
         // Create a copy of the item
         public Item Clone()
         {
-            Item itemClone = new Item(mRoutedEventHandlerButtonClickJumpToWholeItem, mRoutedEventHandlerButtonClickJumpToID,
-                mRoutedEventHandlerButtonClickJumpToName, mRoutedEventHandlerButtonClickJumpToDescription);
+            Item itemClone = new Item(mRoutedEventHandlerButtonClickUpdateItem, mRoutedEventHandlerButtonClickJumpToWholeItem,
+                mRoutedEventHandlerButtonClickJumpToID, mRoutedEventHandlerButtonClickJumpToName, mRoutedEventHandlerButtonClickJumpToDescription);
 
             // Ints and strings
             itemClone.ID                        = mID;

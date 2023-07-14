@@ -36,6 +36,17 @@ namespace WLO_Translator_WPF
                 Replace('	', charReplace).Replace('', charReplace);
         }
 
+        public static bool IsBytesEqualToString(byte[] bytes, int startIndex, int length, string text)
+        {
+            for (int i = 0; i < length; ++i)
+            {
+                if ((char)bytes[i + startIndex] != text[i])
+                    return false;
+            }
+
+            return true;
+        }
+
         public static string GetNullStringOfLength(int length)
         {
             if (length < 0)
