@@ -263,70 +263,15 @@ namespace WLO_Translator_WPF
             scintillaTextBox.ReadOnly       = true;
         }
 
-        private void TextBoxItemSearchBar_TextChanged(object sender, TextChangedEventArgs e)
+        private void TextBoxItemSearchBar_TextChanged(object sender, TextChangedEventArgs e)            { UpdateVisableItems(); }
+        private void CheckBoxShowItemsWithBadCharsOnly_Click(object sender, RoutedEventArgs e)          { UpdateVisableItems(); }
+        private void CheckBoxShowItemsWithoutDescriptionsOnly_Click(object sender, RoutedEventArgs e)   { UpdateVisableItems(); }
+
+        private void UpdateVisableItems()
         {
             ItemStorageManager.UpdateVisableItems(ref ListBoxFoundItems, ref ListBoxStoredItems,
-                TextBoxItemSearchBar.Text, CheckBoxShowItemsWithBadCharsOnly.IsChecked.Value);
-            //// Only allow searches if CheckBoxShowItemsWithBadCharsOnly is not checked
-            //if (CheckBoxShowItemsWithBadCharsOnly.IsChecked.Value)
-            //    return;
-
-            //string text = ((TextBox)sender).Text;
-
-            //// Don't allow searches for too small words
-            //if (text.Length != 0 && text.Length < 2)
-            //    return;
-
-            //List<Item> itemsStored  = new List<Item>();
-            //List<Item> itemsFound   = new List<Item>();
-
-            //if (text == "" && mStoredItemsWhileSearching != null)
-            //{
-            //    // Add the stored items back
-            //    itemsStored = mStoredItemsWhileSearching;
-            //    itemsFound  = mFoundItemsWhileSearching;
-            //    mStoredItemsWhileSearching  = null;
-            //    mFoundItemsWhileSearching   = null;
-            //}
-            //else
-            //{
-            //    // Add only the found items from the search and temporary store the stored items
-            //    if (mStoredItemsWhileSearching == null)
-            //    {
-            //        mStoredItemsWhileSearching  = ListBoxStoredItems.Items.OfType<Item>().ToList();
-            //        mFoundItemsWhileSearching   = ListBoxFoundItems.Items.OfType<Item>().ToList();
-            //    }
-
-            //    itemsStored = mStoredItemsWhileSearching.Where((Item item) =>
-            //    {
-            //        return item.Name.Contains(text);
-            //    }).ToList();
-
-            //    foreach (Item itemStored in itemsStored)
-            //    {
-            //        Item itemFound = mFoundItemsWhileSearching.FirstOrDefault((Item item) =>
-            //        {
-            //            return item.ID[0] == itemStored.ID[0] && item.ID[1] == itemStored.ID[1];
-            //        });
-
-            //        if (itemFound != null)
-            //            itemsFound.Add(itemFound);
-            //    }
-            //}
-
-            //ListBoxStoredItems.Items.Clear();
-            //ListBoxFoundItems.Items.Clear();
-            //foreach (Item itemCurrent in itemsStored)
-            //{
-            //    ListBoxStoredItems.Items.Add(itemCurrent);
-            //}
-
-            //foreach (Item itemCurrent in itemsFound)
-            //{
-            //    if (!ListBoxFoundItems.Items.Contains(itemCurrent))
-            //        ListBoxFoundItems.Items.Add(itemCurrent);
-            //}
-        }        
+                TextBoxItemSearchBar.Text, CheckBoxShowItemsWithBadCharsOnly.IsChecked.Value, CheckBoxShowItemsWithoutDescriptionsOnly.IsChecked.Value);
+        }
 
         private void MenuItemExportFile_Click(object sender, RoutedEventArgs e)
         {
@@ -342,12 +287,6 @@ namespace WLO_Translator_WPF
                 return;
 
             File.WriteAllText(".\\testexportfile.dat", text, Encoding.GetEncoding(1252)/*Encoding.GetEncoding("big5")*/);
-        }
-
-        private void CheckBoxShowItemsWithBadCharsOnly_Click(object sender, RoutedEventArgs e)
-        {
-            ItemStorageManager.UpdateVisableItems(ref ListBoxFoundItems, ref ListBoxStoredItems,
-                TextBoxItemSearchBar.Text, CheckBoxShowItemsWithBadCharsOnly.IsChecked.Value);
         }
     }
 }

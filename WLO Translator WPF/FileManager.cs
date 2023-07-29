@@ -379,27 +379,39 @@ namespace WLO_Translator_WPF
                         itemNameLength = bytes[itemStartPosition];
                         currentItem.TextBoxNameLengthText = itemNameLength.ToString();
 
-                        string itemName = "";
-
-                        // break if outside boundaries
+                        // Break if outside boundaries
                         if (itemNameStartPosition + itemNameLength >= bytes.Length)
                         {
                             mBackgroundWorkerOpenFileToTranslate.ReportProgress(bytes.Length);
                             break;
                         }
 
+                        // Get the item name starting from itemNameStartPosition to itemNameStartPosition + itemNameLength
+                        string itemName = "";
                         for (int j = itemNameStartPosition; j < itemNameStartPosition + itemNameLength; ++j)
                             itemName += (char)bytes[j];
 
-                        currentItem.NameReversed = TextManager.CleanStringFromNewLinesAndBadChars(itemName);
+                        itemName = TextManager.CleanStringFromNewLinesAndBadChars(itemName);
+
+                        // Remove chars from the name until no illegal chars or initial non-althabetical or numerical chars are left
+                        while (!TextManager.IsStringContainingOnlyQuestionMarks(itemName) && !(itemName == ")???(") &&
+                            (TextManager.IsStringContainingIllegalChar(itemName) ||
+                            TextManager.IsStringEndingWithNonNumberOrLetterOrParenthesesChar(itemName)))
+                        {
+                            itemName = itemName.Remove(itemName.Length - 1);
+                            --itemNameLength;
+                        }
+
+                        currentItem.NameReversed = itemName;
 
                         // Reverse the string so it becomes readable (unreversed), since it's stored reversed in the files
                         itemName = TextManager.ReverseString(currentItem.NameReversed);
 
-                        currentItem.Name = itemName;
-                        currentItem.NameStartPosition = itemNameStartPosition;
-                        currentItem.NameEndPosition = itemNameStartPosition + itemNameLength;
+                        currentItem.Name                = itemName;
+                        currentItem.NameStartPosition   = itemNameStartPosition;
+                        currentItem.NameEndPosition     = itemNameStartPosition + itemNameLength;
 
+                        // Get the item ID
                         if (itemNameStartPosition + itemNameLength + 2 < bytes.Length)
                         {
                             currentItem.ID = new int[]
@@ -411,7 +423,6 @@ namespace WLO_Translator_WPF
                             currentItem.IDEndPosition = itemNameStartPosition + itemNameLength + 1;
                         }
 
-                        //mListBoxFoundItems.Items.Add(currentItem);
                         items.Add(currentItem);
                         itemInfoCollectionState = ItemInfoCollectionStates.FIND_DESCRIPTION_LENGHT;
 
@@ -421,8 +432,18 @@ namespace WLO_Translator_WPF
                     {
                         i += Constants.AFTER_NAME_TO_DESCRIPTIONLENGTH_LENGTH - 1;
 
-                        itemDescriptionLength = bytes[i/* - zeroCounter*/];
-                        currentItem.DescriptionLengthPosition = i/* - zeroCounter*/;
+                        itemDescriptionLength = bytes[i];
+
+                        // If the description length becomes 0, decrease i by 1 and get the new description length from that position
+                        while (itemDescriptionLength == 0 && i > currentItem.IDEndPosition)
+                        {
+                            --i;
+                            itemDescriptionLength = bytes[i];
+
+                            System.Console.WriteLine("WARNING: Item \"" + currentItem.Name + "\"'s description length was 0");
+                        }
+
+                        currentItem.DescriptionLengthPosition = i;
                         itemInfoCollectionState = ItemInfoCollectionStates.FIND_DESCRIPTION;
                     }
                     else if (itemInfoCollectionState == ItemInfoCollectionStates.FIND_DESCRIPTION)
@@ -430,15 +451,27 @@ namespace WLO_Translator_WPF
                         itemDescriptionStartPosition = i;
                         string itemDescription = "";
 
-                        // break if outside boundaries
+                        // Break if outside boundaries
                         if (itemDescriptionStartPosition + itemDescriptionLength >= bytes.Length)
                         {
                             mBackgroundWorkerOpenFileToTranslate.ReportProgress(bytes.Length);
                             break;
                         }
 
-                        for (int j = itemDescriptionStartPosition; j < itemDescriptionStartPosition + itemDescriptionLength; ++j)
+                        // Get description
+                        int j = itemDescriptionStartPosition;
+                        for (; j < itemDescriptionStartPosition + itemDescriptionLength; ++j)
                             itemDescription += (char)bytes[j];
+
+                        // If the description doesn't end there it should, increase the description until it's fully retrieved
+                        while (!TextManager.IsStringContainingNonConventionalChar(((char)bytes[j]).ToString())/*(char)bytes[j] != '\u0090' && (char)bytes[j] != '\u0093' && (char)bytes[j] != '\u2013'*/)
+                        {
+                            itemDescription += (char)bytes[j];
+                            ++j;
+                        }
+
+                        if (itemDescription == "")
+                            System.Console.WriteLine("WARNING: Item \"" + currentItem.Name + "\" didn't get a description");
 
                         currentItem.DescriptionReversed = TextManager.CleanStringFromNewLinesAndBadChars(itemDescription);
                             
@@ -545,8 +578,8 @@ namespace WLO_Translator_WPF
 
             mBackgroundWorkerOpenFileToTranslate = new BackgroundWorker(); // () => ThreadOpenFileToTranslate(fileName)
             mBackgroundWorkerOpenFileToTranslate.WorkerReportsProgress = true;
-            mBackgroundWorkerOpenFileToTranslate.DoWork += BackgroundWorkerOpenFileToTranslate_DoWork;
-            mBackgroundWorkerOpenFileToTranslate.ProgressChanged += BackgroundWorkerOpenFileToTranslate_ProgressChanged;
+            mBackgroundWorkerOpenFileToTranslate.DoWork             += BackgroundWorkerOpenFileToTranslate_DoWork;
+            mBackgroundWorkerOpenFileToTranslate.ProgressChanged    += BackgroundWorkerOpenFileToTranslate_ProgressChanged;
             mBackgroundWorkerOpenFileToTranslate.RunWorkerCompleted += BackgroundWorkerOpenFileToTranslate_RunWorkerCompleted;
             mBackgroundWorkerOpenFileToTranslate.RunWorkerAsync(fileName);
         }

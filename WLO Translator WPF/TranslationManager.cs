@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -20,17 +19,15 @@ namespace WLO_Translator_WPF
             else
                 taskAmount = maxTasks;
 
-            int itemsPerTask = foundItemData.Count() / taskAmount, currentItemsPerTask = itemsPerTask;
-            int itemsToTranslate = itemsPerTask;
-            ItemData taskItemLast = null;
-
-            List<Task> tasks = new List<Task>();
-
-            string[] substrings = new string[taskAmount];
-            int[] textPartStartPositions = new int[taskAmount];
-            int[] itemToStartFromIndice = new int[taskAmount];
-            int[] itemsToTranslateList = new int[taskAmount];
-            Stack<int> indice = new Stack<int>();
+            int         itemsPerTask            = foundItemData.Count() / taskAmount, currentItemsPerTask = itemsPerTask;
+            int         itemsToTranslate        = itemsPerTask;
+            ItemData    taskItemLast            = null;
+            List<Task>  tasks                   = new List<Task>();
+            string[]    substrings              = new string[taskAmount];
+            int[]       textPartStartPositions  = new int[taskAmount];
+            int[]       itemToStartFromIndice   = new int[taskAmount];
+            int[]       itemsToTranslateList    = new int[taskAmount];
+            Stack<int>  indice                  = new Stack<int>();
 
             // Start tasks
             for (int i = 0; i < taskAmount; i++)
@@ -38,22 +35,22 @@ namespace WLO_Translator_WPF
                 // Get the last task item to translate for this task
                 if (i == taskAmount - 1)
                 {
-                    taskItemLast = foundItemData.Last();
-                    itemsToTranslate = foundItemData.Count() - i * itemsPerTask;
+                    taskItemLast        = foundItemData.Last();
+                    itemsToTranslate    = foundItemData.Count() - i * itemsPerTask;
                 }
                 else
-                    taskItemLast = foundItemData[i * itemsPerTask + itemsPerTask];
+                    taskItemLast        = foundItemData[i * itemsPerTask + itemsPerTask];
 
-                int itemStartPosition = foundItemData[i * itemsPerTask].ItemStartPosition;
+                int itemStartPosition   = foundItemData[i * itemsPerTask].ItemStartPosition;
                 if (i == 0)
-                    itemStartPosition = 0;
-                int itemEndPosition = taskItemLast.ItemEndPosition;
+                    itemStartPosition   = 0;
+                int itemEndPosition     = taskItemLast.ItemEndPosition;
 
                 // Set values to the correct index in the arrays
-                substrings[i] = text.Substring(itemStartPosition, itemEndPosition - itemStartPosition);
-                textPartStartPositions[i] = itemStartPosition;
-                itemToStartFromIndice[i] = i * itemsPerTask;
-                itemsToTranslateList[i] = itemsToTranslate;
+                substrings[i]               = text.Substring(itemStartPosition, itemEndPosition - itemStartPosition);
+                textPartStartPositions[i]   = itemStartPosition;
+                itemToStartFromIndice[i]    = i * itemsPerTask;
+                itemsToTranslateList[i]     = itemsToTranslate;
                 indice.Push(i);
             }
 
@@ -80,9 +77,6 @@ namespace WLO_Translator_WPF
                 Console.WriteLine(task.Result.Substring(0, 25));
                 task.Dispose();
             }
-
-            //await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-            //Console.WriteLine(result);
 
             return result;
         }

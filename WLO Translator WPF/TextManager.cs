@@ -31,7 +31,7 @@ namespace WLO_Translator_WPF
 
         public static string CleanStringFromNewLinesAndBadChars(string str)
         {
-            char charReplace = '*';
+            char charReplace = '.';
             return str.Replace((char)10, charReplace).Replace((char)13, charReplace).Replace('\0', charReplace).Replace('', charReplace).
                 Replace('	', charReplace).Replace('', charReplace);
         }
@@ -67,6 +67,61 @@ namespace WLO_Translator_WPF
                 return Math.Abs(length);
             else
                 return 0;
+        }
+
+        public static bool IsStringContainingIllegalChar(string text)
+        {
+            if (text == null || text.Length == 0)
+                return false;
+
+            foreach (char currentChar in text)
+            {
+                if (currentChar < 32 || (currentChar > 127 && currentChar < 160))
+                    return true;
+            }
+
+            return false;
+        }
+
+        public static bool IsStringContainingNonConventionalChar(string text)
+        {
+            if (text == null || text.Length == 0)
+                return false;
+
+            foreach (char currentChar in text)
+            {
+                if (!char.IsLetterOrDigit(currentChar) && !char.IsSeparator(currentChar) &&
+                    !char.IsPunctuation(currentChar) && !char.IsSymbol(currentChar) && !(currentChar == ','))
+                    return true;
+            }
+
+            return false;
+        }
+
+        public static bool IsStringEndingWithNonNumberOrLetterOrParenthesesChar(string text)
+        {
+            if (text == null || text.Length == 0)
+                return false;
+
+            char lastChar = text[text.Length - 1];
+            if (IsStringContainingNonConventionalChar(lastChar.ToString())/*!char.IsLetterOrDigit(lastChar) && lastChar != '(' && lastChar != ')' && lastChar != '´'*/)
+                return true;
+
+            return false;
+        }
+
+        public static bool IsStringContainingOnlyQuestionMarks(string text)
+        {
+            if (text == null || text.Length == 0)
+                return false;
+
+            foreach (char currentChar in text)
+            {
+                if (currentChar != '?')
+                    return false;
+            }
+
+            return true;
         }
     }
 }

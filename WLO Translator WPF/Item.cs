@@ -113,35 +113,12 @@ namespace WLO_Translator_WPF
             }
         }
 
-        private bool ContainsIllegalChar(string mName)
-        {
-            foreach (char currentChar in mName)
-            {
-                if (currentChar < 32 || (currentChar > 127 && currentChar < 160))
-                    return true;
-            }
-
-            return false;
-        }
-
-        private bool ContainsNoneNumberOrLetterChar(string mName)
-        {
-            foreach (char currentChar in mName)
-            {
-                if (!char.IsLetterOrDigit(currentChar) && !char.IsSeparator(currentChar) &&
-                    !char.IsPunctuation(currentChar) && !char.IsSymbol(currentChar) && !(currentChar == ','))
-                    return true;
-            }
-
-            return false;
-        }
-
         private void CheckIllegalChars(ref TextBox textBox)
         {
             string text = textBox.Text;//RichTextBoxGetText(ref textBox);
-            if (ContainsIllegalChar(text))
+            if (TextManager.IsStringContainingIllegalChar(text))
                 textBox.Background = Brushes.Red;
-            else if (ContainsNoneNumberOrLetterChar(text))
+            else if (TextManager.IsStringContainingNonConventionalChar(text))
                 textBox.Background = Brushes.Orange;
             else
                 textBox.Background = Brushes.Transparent;
@@ -149,7 +126,7 @@ namespace WLO_Translator_WPF
 
         public bool TextBoxesContainsIllegalChars()
         {
-            return ContainsIllegalChar(mTextBoxName.Text) || ContainsIllegalChar(mTextBoxDescription.Text);
+            return mTextBoxName.Background == Brushes.Red || mTextBoxDescription.Background == Brushes.Red;
         }
 
         // Positions

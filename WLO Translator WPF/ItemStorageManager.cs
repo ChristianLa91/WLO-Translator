@@ -10,16 +10,12 @@ namespace WLO_Translator_WPF
         private static List<Item> mFoundItemsWhileSearching;
 
         public static void UpdateVisableItems(ref ListBox listBoxFoundItems, ref ListBox listBoxStoredItems,
-            string searchString, bool showItemsWithBadCharsOnly)
+            string searchString, bool showItemsWithBadCharsOnly, bool showItemsWithoutDescriptionsOnly)
         {
-            // Don't allow searches for too small words
-            if (searchString.Length != 0 && searchString.Length < 2)
-                return;
-
             List<Item> itemsStored = new List<Item>();
             List<Item> itemsFound = new List<Item>();
 
-            if (searchString == "" && mStoredItemsWhileSearching != null)
+            if (searchString == "" && !showItemsWithBadCharsOnly && mStoredItemsWhileSearching != null)
             {
                 // Add the stored items back
                 itemsStored = mStoredItemsWhileSearching;
@@ -36,42 +32,73 @@ namespace WLO_Translator_WPF
                     mFoundItemsWhileSearching = listBoxFoundItems.Items.OfType<Item>().ToList();
                 }
 
-                // Find items and temporary store them localy
-                itemsStored = mStoredItemsWhileSearching.Where((Item item) =>
+                // Search for items containing a string
+                if (searchString != "" && searchString.Length < 2)
                 {
-                    return item.Name.Contains(searchString);
-                }).ToList();
-
-                foreach (Item itemStored in itemsStored)
-                {
-                    Item itemFound = mFoundItemsWhileSearching.FirstOrDefault((Item item) =>
+                    // Find items and temporary store them localy
+                    itemsStored = mStoredItemsWhileSearching.Where((Item item) =>
                     {
-                        return item.ID[0] == itemStored.ID[0] && item.ID[1] == itemStored.ID[1];
-                    });
+                        return item.Name.Contains(searchString);
+                    }).ToList();
 
-                    if (itemFound != null)
-                        itemsFound.Add(itemFound);
+                    foreach (Item itemStored in itemsStored)
+                    {
+                        Item itemFound = mFoundItemsWhileSearching.FirstOrDefault((Item item) =>
+                        {
+                            return item.ID[0] == itemStored.ID[0] && item.ID[1] == itemStored.ID[1];
+                        });
+
+                        if (itemFound != null)
+                            itemsFound.Add(itemFound);
+                    }
                 }
-            }
-
-            // If showItemsWithBadCharsOnly, remove all items that don't contain bad chars in their text boxes
-            if (showItemsWithBadCharsOnly)
-            {
-                for (int i = 0; i < itemsStored.Count; ++i)
+                else
                 {
-                    if (!itemsStored[i].TextBoxesContainsIllegalChars())
+                    itemsStored = listBoxStoredItems.Items.OfType<Item>().ToList();
+                    itemsFound = listBoxFoundItems.Items.OfType<Item>().ToList();
+                }
+
+                // If showItemsWithBadCharsOnly, remove all items that don't contain bad chars in their text boxes
+                if (showItemsWithBadCharsOnly)
+                {
+                    for (int i = 0; i < itemsStored.Count; ++i)
                     {
-                        itemsStored.RemoveAt(i);
-                        --i;
+                        if (!itemsStored[i].TextBoxesContainsIllegalChars())
+                        {
+                            itemsStored.RemoveAt(i);
+                            --i;
+                        }
+                    }
+
+                    for (int i = 0; i < itemsFound.Count; ++i)
+                    {
+                        if (!itemsFound[i].TextBoxesContainsIllegalChars())
+                        {
+                            itemsFound.RemoveAt(i);
+                            --i;
+                        }
                     }
                 }
 
-                for (int i = 0; i < itemsFound.Count; ++i)
+                // If showItemsWithoutDescriptionsOnly, remove all items that has a description that's not equal to ""
+                if (showItemsWithoutDescriptionsOnly)
                 {
-                    if (!itemsFound[i].TextBoxesContainsIllegalChars())
+                    for (int i = 0; i < itemsStored.Count; ++i)
                     {
-                        itemsFound.RemoveAt(i);
-                        --i;
+                        if (itemsStored[i].Description != "")
+                        {
+                            itemsStored.RemoveAt(i);
+                            --i;
+                        }
+                    }
+
+                    for (int i = 0; i < itemsFound.Count; ++i)
+                    {
+                        if (itemsFound[i].Description != "")
+                        {
+                            itemsFound.RemoveAt(i);
+                            --i;
+                        }
                     }
                 }
             }

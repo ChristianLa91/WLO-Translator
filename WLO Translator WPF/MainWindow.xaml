@@ -14,7 +14,7 @@
             <Grid Margin="30,15,30,30" Background="#FFFBFBFB">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="31*" MinWidth="200"></ColumnDefinition>
-                    <ColumnDefinition Width="31*"></ColumnDefinition>
+                    <ColumnDefinition Width="31*" MinWidth="550"></ColumnDefinition>
                     <ColumnDefinition Width="18*" MinWidth="200"></ColumnDefinition>
                 </Grid.ColumnDefinitions>
                 <Button x:Name="ButtonOpenFileToTranslate" Content="Open File" Grid.Column="0" HorizontalAlignment="Left" Margin="15,10,0,0" VerticalAlignment="Top" Width="112" Click="ButtonOpenFileToTranslate_Click" Foreground="Black" Height="23"/>
@@ -48,6 +48,7 @@
                 </Button>
                 <Label x:Name="LabelFileToTranslatePath" Content="" HorizontalAlignment="Left" Margin="158,7,0,0" VerticalAlignment="Top"/>
                 <CheckBox x:Name="CheckBoxShowItemsWithBadCharsOnly" Content="Show items with bad chars only" Grid.Column="1" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top" Click="CheckBoxShowItemsWithBadCharsOnly_Click"/>
+                <CheckBox x:Name="CheckBoxShowItemsWithoutDescriptionsOnly" Content="Show items without descriptions only" Grid.Column="1" HorizontalAlignment="Left" Margin="202,10,0,0" VerticalAlignment="Top" Click="CheckBoxShowItemsWithoutDescriptionsOnly_Click" Grid.ColumnSpan="2"/>
             </Grid>
             <Label x:Name="LabelSaved" Content="" Grid.Column="0" HorizontalAlignment="Left" Width="92" Height="26" VerticalAlignment="Bottom"/>
         </Grid>
