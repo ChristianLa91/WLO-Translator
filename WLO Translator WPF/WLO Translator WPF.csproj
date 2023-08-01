@@ -215,7 +215,9 @@
       <SubType>Designer</SubType>
     </ApplicationDefinition>
     <Compile Include="Constants.cs" />
+    <Compile Include="DataObject.cs" />
     <Compile Include="ItemStorageManager.cs" />
+    <Compile Include="ListBoxItems.cs" />
     <Compile Include="TextManager.cs" />
     <Compile Include="TranslationManager.cs" />
     <Compile Include="WindowAbout.xaml.cs" />

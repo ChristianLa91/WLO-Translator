@@ -6,8 +6,11 @@ namespace WLO_Translator_WPF
 {
     public static class ItemStorageManager
     {
-        private static List<Item> mStoredItemsWhileSearching;
-        private static List<Item> mFoundItemsWhileSearching;
+        //public static DataObject DataObject { get; set; }
+        private static List<Item>   mStoredItemsWhileSearching;
+        private static List<Item>   mFoundItemsWhileSearching;
+        //public  static ListBoxItems ListBoxItemsFound   { get; set; }
+        //public  static ListBoxItems ListBoxItemsStored  { get; set; }
 
         public static void UpdateVisableItems(ref ListBox listBoxFoundItems, ref ListBox listBoxStoredItems,
             string searchString, bool showItemsWithBadCharsOnly, bool showItemsWithoutDescriptionsOnly)

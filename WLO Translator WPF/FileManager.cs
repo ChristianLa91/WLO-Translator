@@ -1,8 +1,8 @@
-﻿using Microsoft.Win32;
-using ScintillaNET.WPF;
+﻿using ScintillaNET.WPF;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Windows;
@@ -17,10 +17,13 @@ namespace WLO_Translator_WPF
         //private static string mSaveFilePath;
         private string              mFileEnding = ".wtsi";
         private WindowLoadingBar    mWindowLoadingBar;
-        private Thread              mThreadStoredItemData;
-        private BackgroundWorker    mBackgroundWorkerOpenFileToTranslate;
-        private ListBox             mListBoxStoredItems;
+        private BackgroundWorker    mBackgroundWorkerStoredItemData;
+        private BackgroundWorker    mBackgroundWorkerFoundItemData;
+        private List<ItemData>      mStoredItemsToAdd;
+        private List<ItemData>      mFoundItemsToAdd;
+
         private ListBox             mListBoxFoundItems;
+        private ListBox             mListBoxStoredItems;
 
         private ScintillaWPF        mScintillaWPFTextBox;
 
@@ -29,6 +32,9 @@ namespace WLO_Translator_WPF
         private RoutedEventHandler  mRoutedEventHandlerButtonClickJumpToID;
         private RoutedEventHandler  mRoutedEventHandlerButtonClickJumpToName;
         private RoutedEventHandler  mRoutedEventHandlerButtonClickJumpToDescription;
+
+        private Semaphore           mStoredItemsToAddSemaphore = new Semaphore(1, 1);
+        private Semaphore           mFoundItemsToAddSemaphore  = new Semaphore(1, 1);
 
         private Dispatcher          mDispatcher;
 
@@ -104,52 +110,50 @@ namespace WLO_Translator_WPF
                 //return;
             }
 
-            XmlWriterSettings settings = new XmlWriterSettings();
-            settings.Indent = true;
-            settings.IndentChars = "\t";
-            XmlWriter writer = XmlWriter.Create(saveFilePathWithExtension, settings);
+            XmlWriterSettings settings  = new XmlWriterSettings();
+            settings.Indent             = true;
+            settings.IndentChars        = "\t";
+            XmlWriter writer            = XmlWriter.Create(saveFilePathWithExtension, settings);
 
             try
             {
                 writer.WriteStartElement("AssociatedStoredItemData");
 
-                writer.WriteStartElement("Items");
+                    writer.WriteStartElement("Items");
 
-                writer.WriteAttributeString("ItemCount", listBoxStoredItems.Items.Count.ToString());
+                        writer.WriteAttributeString("ItemCount", listBoxStoredItems.Items.Count.ToString());
 
-                for (int i = 0; i < listBoxStoredItems.Items.Count; i++)
-                {
-                    Item currentItem = listBoxStoredItems.Items[i] as Item;
+                        for (int i = 0; i < listBoxStoredItems.Items.Count; i++)
+                        {
+                            Item currentItem = listBoxStoredItems.Items[i] as Item;
 
-                    writer.WriteStartElement("Item");
+                            writer.WriteStartElement("Item");
 
-                    string idString = currentItem.ID[0].ToString() + currentItem.ID[1].ToString();
+                                string idString                 = currentItem.ID[0].ToString() + currentItem.ID[1].ToString();
 
-                    string filePathItemName = saveFilePath + "." + idString + ".wtn";
-                    string filePathItemDescription = saveFilePath + "." + idString + ".wtd";
+                                string filePathItemName         = saveFilePath + "." + idString + ".wtn";
+                                string filePathItemDescription  = saveFilePath + "." + idString + ".wtd";
 
-                    // Ints and strings
-                    writer.WriteAttributeString("ID1", currentItem.ID[0].ToString());
-                    writer.WriteAttributeString("ID2", currentItem.ID[1].ToString());
-                    writer.WriteAttributeString("Name", /*Encoding.UTF8.GetString(Encoding.UTF8.GetBytes(*/currentItem.Name/*))*/);
-                    //File.WriteAllBytes(filePathItemName, Encoding.UTF8.GetBytes(currentItem.Name));
-                    writer.WriteAttributeString("Description", /*Encoding.UTF8.GetString(Encoding.UTF8.GetBytes(*/currentItem.Description/*)*/);
-                    //File.WriteAllBytes(filePathItemDescription, Encoding.UTF8.GetBytes(currentItem.Description)/*currentItem.Description.ToString()*/);
+                                // Ints and strings
+                                writer.WriteAttributeString("ID1",                      currentItem.ID[0].ToString());
+                                writer.WriteAttributeString("ID2",                      currentItem.ID[1].ToString());
+                                writer.WriteAttributeString("Name",                     currentItem.Name);
+                                writer.WriteAttributeString("Description",              currentItem.Description);
 
-                    // Positions
-                    writer.WriteAttributeString("ItemStartPosition", currentItem.ItemStartPosition.ToString());
-                    writer.WriteAttributeString("ItemEndPosition", currentItem.ItemEndPosition.ToString());
-                    writer.WriteAttributeString("IDStartPosition", currentItem.IDStartPosition.ToString());
-                    writer.WriteAttributeString("IDEndPosition", currentItem.IDEndPosition.ToString());
-                    writer.WriteAttributeString("NameStartPosition", currentItem.NameStartPosition.ToString());
-                    writer.WriteAttributeString("NameEndPosition", currentItem.NameEndPosition.ToString());
-                    writer.WriteAttributeString("DescriptionStartPosition", currentItem.DescriptionStartPosition.ToString());
-                    writer.WriteAttributeString("DescriptionEndPosition", currentItem.DescriptionEndPosition.ToString());
+                                // Positions
+                                writer.WriteAttributeString("ItemStartPosition",        currentItem.ItemStartPosition.ToString());
+                                writer.WriteAttributeString("ItemEndPosition",          currentItem.ItemEndPosition.ToString());
+                                writer.WriteAttributeString("IDStartPosition",          currentItem.IDStartPosition.ToString());
+                                writer.WriteAttributeString("IDEndPosition",            currentItem.IDEndPosition.ToString());
+                                writer.WriteAttributeString("NameStartPosition",        currentItem.NameStartPosition.ToString());
+                                writer.WriteAttributeString("NameEndPosition",          currentItem.NameEndPosition.ToString());
+                                writer.WriteAttributeString("DescriptionStartPosition", currentItem.DescriptionStartPosition.ToString());
+                                writer.WriteAttributeString("DescriptionEndPosition",   currentItem.DescriptionEndPosition.ToString());
+
+                            writer.WriteEndElement();
+                        }
 
                     writer.WriteEndElement();
-                }
-
-                writer.WriteEndElement();
 
                 writer.WriteEndElement();
             }
@@ -164,42 +168,32 @@ namespace WLO_Translator_WPF
             //}
         }
 
-        private void LoadAssociatedStoredItemData(string filePath)
+        private void LoadAssociatedStoredItemData(string fileName)
         {
-            string savefilePath = Directory.GetCurrentDirectory() + "\\" + Path.GetFileNameWithoutExtension(filePath) + mFileEnding;
+            string savefilePath = Directory.GetCurrentDirectory() + "\\" + Path.GetFileNameWithoutExtension(fileName) + mFileEnding;
 
             // Load last saved data, if file exists
             if (File.Exists(savefilePath))
             {
+                mStoredItemsToAdd = new List<ItemData>();
                 mDispatcher.Invoke(() => { mListBoxStoredItems.Items.Clear(); });
 
-                //ThreadHelper.JoinableTaskFactory.Run(async delegate
-                //{
-                //    await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-                //    //if (mListBoxStoredItems.Items.Count > 0)
-                //    //    mListBoxStoredItems.Items.Clear();
-                //});
-
                 XmlReader reader = XmlReader.Create(savefilePath);
-                //string path = "";                
 
                 try
                 {
-                    List<ItemData> items = new List<ItemData>();
-                    int report = 0;
+                    //List<ItemData> items = new List<ItemData>();
+                    int report = 0, progressValue = 0, loadingBarMaximum = 0;
 
                     while (reader.Read())
                     {
                         if (reader.Name == "Items")
                         {
                             if (reader.GetAttribute("ItemCount") != null)
-                            {
-                                mDispatcher.Invoke(() => { mWindowLoadingBar.Maximum = int.Parse(reader.GetAttribute("ItemCount")); });
-                            }
+                                mDispatcher.Invoke(() => { mWindowLoadingBar.Maximum = loadingBarMaximum = int.Parse(reader.GetAttribute("ItemCount")); });
                         }
                         else if (reader.Name == "Item")
-                        {
-                            
+                        {                            
                             ItemData currentItemData = new ItemData();
 
                             //currentItem = new Item(mRoutedEventHandlerButtonClickJumpToWholeItem, mRoutedEventHandlerButtonClickJumpToID,
@@ -238,42 +232,27 @@ namespace WLO_Translator_WPF
                             if (reader.GetAttribute("DescriptionEndPosition") != null)
                                 currentItemData.DescriptionEndPosition = int.Parse(reader.GetAttribute("DescriptionEndPosition"));
 
-                            items.Add(currentItemData);
+                            mStoredItemsToAddSemaphore.WaitOne();
+                                mStoredItemsToAdd.Add(currentItemData);
+                            mStoredItemsToAddSemaphore.Release();
 
-                            if (report > 29999)
+                            if (report > 100)
                             {
                                 // Report progress to progress bar
-                                if (mWindowLoadingBar != null && mWindowLoadingBar.IsActive)
-                                    mWindowLoadingBar.Value++;
-                                Thread.Sleep(1);
+                                mBackgroundWorkerStoredItemData.ReportProgress(progressValue);
+                                Thread.Sleep(80);
                                 report = 0;
                             }
                             ++report;
+                            ++progressValue;
                         }
                     }
 
+                    mBackgroundWorkerStoredItemData.ReportProgress(loadingBarMaximum);
+
                     reader.Close();
 
-                    //Thread.Sleep(1000);
-
-                    mDispatcher.Invoke(() =>
-                    {
-                        using (var dispatcher = mDispatcher.DisableProcessing())
-                        {
-                            // Store all found items in the ListBox
-                            foreach (ItemData itemData in items)
-                            {
-                                mListBoxStoredItems.Items.Add(itemData.ToItem(mRoutedEventHandlerButtonClickUpdateItem,
-                                    mRoutedEventHandlerButtonClickJumpToWholeItem,
-                                    mRoutedEventHandlerButtonClickJumpToID,
-                                    mRoutedEventHandlerButtonClickJumpToName,
-                                    mRoutedEventHandlerButtonClickJumpToDescription));
-                            }
-                        }
-
-                        if (mWindowLoadingBar != null && mWindowLoadingBar.IsActive)
-                            mWindowLoadingBar.Close();
-                    });
+                    //return items;
                 }
                 catch (System.Exception e)
                 {
@@ -282,16 +261,18 @@ namespace WLO_Translator_WPF
                     reader.Close();
                 }
             }
+            else
+                System.Console.WriteLine("Error: " + "The file \"" + savefilePath + "\" couldn't be opened");
         }
 
         public void LoadItemData(string filePath)
         {
             string lodingBarTitle = "Loading Data", loadingBarText = "Loading Stored Item Data";
 
-            if (mThreadStoredItemData != null)
+            if (mBackgroundWorkerStoredItemData != null)
             {
-                mThreadStoredItemData.Abort();
-                mThreadStoredItemData = null;
+                mBackgroundWorkerStoredItemData.Dispose();
+                mBackgroundWorkerStoredItemData = null;
             }
 
             if (mWindowLoadingBar == null)
@@ -304,54 +285,77 @@ namespace WLO_Translator_WPF
             {
                 mWindowLoadingBar.SetTitle(lodingBarTitle);
                 mWindowLoadingBar.SetText(loadingBarText);
+                mWindowLoadingBar.Value = 0;
             }
 
             if (!mWindowLoadingBar.IsActive)
                 mWindowLoadingBar.Show();
 
-            mThreadStoredItemData = new Thread(() => LoadAssociatedStoredItemData(filePath));
-            mThreadStoredItemData.Start();
+            mBackgroundWorkerStoredItemData = new BackgroundWorker();
+            mBackgroundWorkerStoredItemData.WorkerReportsProgress = true;
+            mBackgroundWorkerStoredItemData.DoWork              += BackgroundWorkerStoredItemData_DoWork;
+            mBackgroundWorkerStoredItemData.ProgressChanged     += BackgroundWorkerStoredItemData_ProgressChanged;
+            mBackgroundWorkerStoredItemData.RunWorkerCompleted  += BackgroundWorkerStoredItemData_RunWorkerCompleted;
+            mBackgroundWorkerStoredItemData.RunWorkerAsync(filePath);
+        }
+        private void BackgroundWorkerStoredItemData_DoWork(object sender, DoWorkEventArgs e)
+        {
+            LoadAssociatedStoredItemData(e.Argument as string);
         }
 
-        private void BackgroundWorkerOpenFileToTranslate_DoWork(object sender, DoWorkEventArgs e)
+        private void BackgroundWorkerStoredItemData_ProgressChanged(object sender, ProgressChangedEventArgs e)
+        {
+            // Get the contents of the mStoredItemsToAdd list as an atomic operation
+            mStoredItemsToAddSemaphore.WaitOne();
+                ItemData[] storedItemsToAdd = new ItemData[mStoredItemsToAdd.Count];
+                mStoredItemsToAdd.CopyTo(storedItemsToAdd);
+                mStoredItemsToAdd.Clear();
+            mStoredItemsToAddSemaphore.Release();
+
+            foreach (ItemData item in storedItemsToAdd)
+            {
+                //mListBox.ItemsSource.GetEnumerator().MoveNext();
+                mListBoxStoredItems.Items.Add(item.ToItem(mRoutedEventHandlerButtonClickUpdateItem,
+                        mRoutedEventHandlerButtonClickJumpToWholeItem,
+                        mRoutedEventHandlerButtonClickJumpToID,
+                        mRoutedEventHandlerButtonClickJumpToName,
+                        mRoutedEventHandlerButtonClickJumpToDescription));
+            }
+
+            mWindowLoadingBar.Value = e.ProgressPercentage;
+        }
+
+        private void BackgroundWorkerStoredItemData_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
+        {
+            // Close loading bar
+            if (mWindowLoadingBar != null && mWindowLoadingBar.IsActive)
+                mWindowLoadingBar.Close();
+        }
+
+        private void BackgroundWorkerFoundItemData_DoWork(object sender, DoWorkEventArgs e)
         {
             string fileName = e.Argument as string;
-            e.Result = fileName;
-            mDispatcher.Invoke(() =>
-            {
-                mScintillaWPFTextBox.Scintilla.Text = "";
-                mListBoxFoundItems.Items.Clear();
-                mListBoxStoredItems.Items.Clear();
-
-                string fileText = File.ReadAllText(fileName, Encoding.GetEncoding(1252));
-                mOpenFileText   = fileText;
-                fileText        = TextManager.CleanStringFromNewLinesAndBadChars(fileText);
-
-                mScintillaWPFTextBox.ReadOnly = false;
-                mScintillaWPFTextBox.Scintilla.Text = fileText;
-                mScintillaWPFTextBox.ReadOnly = true;
-            });
 
             // Load Data
             FileStream fileStream = File.OpenRead(fileName);
             byte[] bytes = new byte[fileStream.Length];
             int readBytesAmount = fileStream.Read(bytes, 0, (int)fileStream.Length);
 
-            string byteString = Encoding.GetEncoding(1252).GetString(bytes);
+            //string byteString = Encoding.GetEncoding(1252).GetString(bytes);
 
             int itemStartPosition = -1, itemNameStartPosition = -1, itemNameLength = -1,
-                itemDescriptionStartPosition = -1, itemDescriptionLength = -1, zeroCounter = 0, stopAtItem = 1;
+                itemDescriptionStartPosition = -1, itemDescriptionLength = -1/*, zeroCounter = 0, stopAtItem = 1*/;
             ItemInfoCollectionStates itemInfoCollectionState = ItemInfoCollectionStates.FIND_NAME_LENGHT;
-            //Item currentItem = null;
             ItemData currentItem = null;
 
-            List<ItemData> items = new List<ItemData>();
+            //List<ItemData> items = new List<ItemData>();
+            mFoundItemsToAdd = new List<ItemData>();
 
             mDispatcher.Invoke(() =>
             {
                 mWindowLoadingBar.Maximum = bytes.Length;
-                mBackgroundWorkerOpenFileToTranslate.ReportProgress(0);
-                Thread.Sleep(1);
+                mBackgroundWorkerFoundItemData.ReportProgress(0);
+                Thread.Sleep(10);
             });
 
             int report = 0;
@@ -364,7 +368,7 @@ namespace WLO_Translator_WPF
                 // Find start of item
                 if (currentByte != '\0' && !(currentItem == null && currentByte == '\t'))
                 {
-                    zeroCounter = 0;
+                    //zeroCounter = 0;
 
                     if (itemInfoCollectionState == ItemInfoCollectionStates.FIND_NAME_LENGHT)
                     {
@@ -382,7 +386,7 @@ namespace WLO_Translator_WPF
                         // Break if outside boundaries
                         if (itemNameStartPosition + itemNameLength >= bytes.Length)
                         {
-                            mBackgroundWorkerOpenFileToTranslate.ReportProgress(bytes.Length);
+                            mBackgroundWorkerFoundItemData.ReportProgress(bytes.Length);
                             break;
                         }
 
@@ -423,7 +427,9 @@ namespace WLO_Translator_WPF
                             currentItem.IDEndPosition = itemNameStartPosition + itemNameLength + 1;
                         }
 
-                        items.Add(currentItem);
+                        mFoundItemsToAddSemaphore.WaitOne();
+                        mFoundItemsToAdd.Add(currentItem);
+                        mFoundItemsToAddSemaphore.Release();
                         itemInfoCollectionState = ItemInfoCollectionStates.FIND_DESCRIPTION_LENGHT;
 
                         i += itemNameLength;// + 2;
@@ -454,7 +460,7 @@ namespace WLO_Translator_WPF
                         // Break if outside boundaries
                         if (itemDescriptionStartPosition + itemDescriptionLength >= bytes.Length)
                         {
-                            mBackgroundWorkerOpenFileToTranslate.ReportProgress(bytes.Length);
+                            mBackgroundWorkerFoundItemData.ReportProgress(bytes.Length);
                             break;
                         }
 
@@ -478,69 +484,63 @@ namespace WLO_Translator_WPF
                         // Reverse the string so it becomes readable (unreversed), since it's stored reversed in the files
                         itemDescription = TextManager.ReverseString(currentItem.DescriptionReversed);
 
-                        currentItem.Description = itemDescription;
-                        currentItem.DescriptionStartPosition = itemDescriptionStartPosition;
-                        currentItem.DescriptionEndPosition = itemDescriptionStartPosition + itemDescriptionLength;
+                        currentItem.Description                 = itemDescription;
+                        currentItem.DescriptionStartPosition    = itemDescriptionStartPosition;
+                        currentItem.DescriptionEndPosition      = itemDescriptionStartPosition + itemDescriptionLength;
 
-                        itemInfoCollectionState = ItemInfoCollectionStates.FIND_NAME_LENGHT;
+                        itemInfoCollectionState                 = ItemInfoCollectionStates.FIND_NAME_LENGHT;
 
                         i = currentItem.ItemStartPosition + 450;
 
                         currentItem.ItemEndPosition = i + 1;
-
-                        //if (currentItem.ItemStartPosition + 451 != currentItem.ItemEndPosition)
-                        //    throw new ArgumentException("currentItem.ItemStartPosition + 451 != currentItem.ItemEndPosition");
-                        //ColorRichTextBoxText(ref mScintillaWPFTextBox, Colors.Green,
-                        //    itemStartPosition, i);
-                        //if (stopAtItem == 1)
-                        //    break;
-                        //++stopAtItem;
                     }
                 }
-                //else if (currentByte == 'Ê' && TextManager.IsBytesEqualToString(bytes, i, 11, "ÊïÊïÊïÊïÊïÊ")/*'\0'*/)
-                //{
-                //    i += 11;
-                //    if (itemInfoCollectionState == ItemInfoCollectionStates.FIND_DESCRIPTION_LENGHT)
-                //        ++zeroCounter;
 
-                //    if (itemInfoCollectionState == ItemInfoCollectionStates.FIND_DESCRIPTION_LENGHT && zeroCounter == 2)
-                //    {
-                //        itemDescriptionLength = bytes[i/* - zeroCounter*/];
-                //        currentItem.DescriptionLengthPosition = i/* - zeroCounter*/;
-                //        itemInfoCollectionState = ItemInfoCollectionStates.FIND_DESCRIPTION;
-
-                //        //zeroCounter = 0;
-                //    }
-                //}
-
-                if (report > 29999)
+                if (report > 2500)
                 {
-                    mBackgroundWorkerOpenFileToTranslate.ReportProgress(i);
-                    Thread.Sleep(1);
+                    mBackgroundWorkerFoundItemData.ReportProgress(i);
+                    Thread.Sleep(10);
                     report = 0;
                 }
                 ++report;
-                //mWindowLoadingBar.Value = i;
             }
 
-            //Thread.Sleep(10);
-            
-            mDispatcher.Invoke(() =>
-            {
-                using (var dispatcher = mDispatcher.DisableProcessing())
-                {
-                    // Store all found items in the ListBox
-                    foreach (ItemData itemData in items)
-                    {
-                        mListBoxFoundItems.Items.Add(itemData.ToItem(mRoutedEventHandlerButtonClickUpdateItem,
-                            mRoutedEventHandlerButtonClickJumpToWholeItem,
-                            mRoutedEventHandlerButtonClickJumpToID,
-                            mRoutedEventHandlerButtonClickJumpToName,
-                            mRoutedEventHandlerButtonClickJumpToDescription));
-                    }
-                }
-            });
+            mBackgroundWorkerFoundItemData.ReportProgress(bytes.Length);
+
+            e.Result = fileName;
         }
+
+        //private void UpdateListBoxItems(ListBox listBox, List<ItemData> items)
+        //{
+        //    //int report = 0;
+
+        //    //// Create an ObservableCollection to hold your items
+        //    //ObservableCollection<Item> yourItemsCollection = new ObservableCollection<Item>();
+
+        //    //// Set the collection as the ItemsSource for the ListBox
+        //    //listBox.ItemsSource = yourItemsCollection;
+
+        //    // Get the CollectionView associated with the ListBox
+        //    CollectionView view = (CollectionView)CollectionViewSource.GetDefaultView(listBox.ItemsSource);
+
+        //    // Store all found items in the ListBox
+        //    // Suspend updates while adding a bunch of items
+        //    using (view.DeferRefresh())
+        //    {
+        //        foreach (ItemData itemData in items)
+        //        {
+        //            listBox.Items.Add(itemData.ToItem(mRoutedEventHandlerButtonClickUpdateItem,
+        //                mRoutedEventHandlerButtonClickJumpToWholeItem,
+        //                mRoutedEventHandlerButtonClickJumpToID,
+        //                mRoutedEventHandlerButtonClickJumpToName,
+        //                mRoutedEventHandlerButtonClickJumpToDescription));
+
+        //            //if (report > 1000)
+        //            //    Thread.Sleep(1);
+        //            //++report;
+        //        }
+        //    }
+        //}
 
         public void UpdateItemInfoBasedOnNewNameLength(Item item)
         {
@@ -565,10 +565,10 @@ namespace WLO_Translator_WPF
 
         public void OpenFileToTranslate(string fileName)
         {
-            if (mBackgroundWorkerOpenFileToTranslate != null)
+            if (mBackgroundWorkerFoundItemData != null)
             {
-                mBackgroundWorkerOpenFileToTranslate.Dispose();
-                mBackgroundWorkerOpenFileToTranslate = null;
+                mBackgroundWorkerFoundItemData.Dispose();
+                mBackgroundWorkerFoundItemData = null;
             }
 
             mWindowLoadingBar = new WindowLoadingBar("Loading Data", "Loading Item Data From File", 1);
@@ -576,22 +576,55 @@ namespace WLO_Translator_WPF
             mWindowLoadingBar.Owner = Application.Current.MainWindow;
             mWindowLoadingBar.Show();
 
-            mBackgroundWorkerOpenFileToTranslate = new BackgroundWorker(); // () => ThreadOpenFileToTranslate(fileName)
-            mBackgroundWorkerOpenFileToTranslate.WorkerReportsProgress = true;
-            mBackgroundWorkerOpenFileToTranslate.DoWork             += BackgroundWorkerOpenFileToTranslate_DoWork;
-            mBackgroundWorkerOpenFileToTranslate.ProgressChanged    += BackgroundWorkerOpenFileToTranslate_ProgressChanged;
-            mBackgroundWorkerOpenFileToTranslate.RunWorkerCompleted += BackgroundWorkerOpenFileToTranslate_RunWorkerCompleted;
-            mBackgroundWorkerOpenFileToTranslate.RunWorkerAsync(fileName);
+            // Load in text from file
+            mScintillaWPFTextBox.Scintilla.Text = "";
+            mListBoxFoundItems.Items.Clear();
+            mListBoxStoredItems.Items.Clear();
+
+            string fileText = File.ReadAllText(fileName, Encoding.GetEncoding(1252));
+            mOpenFileText   = fileText;
+            fileText        = TextManager.CleanStringFromNewLinesAndBadChars(fileText);
+
+            mScintillaWPFTextBox.ReadOnly       = false;
+            mScintillaWPFTextBox.Scintilla.Text = fileText;
+            mScintillaWPFTextBox.ReadOnly       = true;
+
+            // Extract item data from the loaded file
+            mBackgroundWorkerFoundItemData = new BackgroundWorker(); // () => ThreadOpenFileToTranslate(fileName)
+            mBackgroundWorkerFoundItemData.WorkerReportsProgress = true;
+            mBackgroundWorkerFoundItemData.DoWork             += BackgroundWorkerFoundItemData_DoWork;
+            mBackgroundWorkerFoundItemData.ProgressChanged    += BackgroundWorkerFoundItemData_ProgressChanged;
+            mBackgroundWorkerFoundItemData.RunWorkerCompleted += BackgroundWorkerFoundItemData_RunWorkerCompleted;
+            mBackgroundWorkerFoundItemData.RunWorkerAsync(fileName);
         }
 
-        private void BackgroundWorkerOpenFileToTranslate_ProgressChanged(object sender, ProgressChangedEventArgs e)
+        private void BackgroundWorkerFoundItemData_ProgressChanged(object sender, ProgressChangedEventArgs e)
         {
+            // Get the contents of the mFoundItemsToAdd list as an atomic operation
+            mFoundItemsToAddSemaphore.WaitOne();
+                ItemData[] foundItemsToAdd = new ItemData[mFoundItemsToAdd.Count];
+                mFoundItemsToAdd.CopyTo(foundItemsToAdd);
+                mFoundItemsToAdd.Clear();
+            mFoundItemsToAddSemaphore.Release();
+
+            foreach (ItemData item in foundItemsToAdd)
+            {
+                //mListBox.ItemsSource.GetEnumerator().MoveNext();
+                mListBoxFoundItems.Items.Add(item.ToItem(mRoutedEventHandlerButtonClickUpdateItem,
+                        mRoutedEventHandlerButtonClickJumpToWholeItem,
+                        mRoutedEventHandlerButtonClickJumpToID,
+                        mRoutedEventHandlerButtonClickJumpToName,
+                        mRoutedEventHandlerButtonClickJumpToDescription));
+            }
+
             mWindowLoadingBar.Value = e.ProgressPercentage;
         }
 
-        private void BackgroundWorkerOpenFileToTranslate_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
+        private void BackgroundWorkerFoundItemData_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
         {
-            LoadItemData((string)e.Result);
+            //ItemStorageManager.ListBoxItemsFound.Add((List<ItemData>)((object[])e.Result)[0]);
+            //UpdateListBoxItems(mListBoxFoundItems, (List<ItemData>)((object[])e.Result)[0]);
+            LoadItemData(e.Result as string);
         }
 
         string StringFromRichTextBox(RichTextBox richTextBox)

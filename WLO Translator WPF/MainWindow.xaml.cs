@@ -1,7 +1,6 @@
 ﻿using Microsoft.Win32;
 using System;
 using System.IO;
-using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Windows;
@@ -11,9 +10,6 @@ using ScintillaNET.WPF;
 using System.Windows.Controls;
 using System.Threading.Tasks;
 using System.Collections.Generic;
-using Microsoft.VisualStudio.Shell;
-using System.Runtime.CompilerServices;
-using Microsoft.VisualStudio.Threading;
 
 namespace WLO_Translator_WPF
 {
@@ -23,15 +19,20 @@ namespace WLO_Translator_WPF
     public partial class MainWindow : Window
     {
         private OpenFileDialog          mOpenFileDialog;
-
         private FileManager             mFileManager;
-        //private JoinableTaskContext     mJoinableTaskContext;
-        //private JoinableTaskCollection  mJoinableTaskCollection;
-        //private JoinableTaskFactory     mJoinableTaskFactory;
 
         public MainWindow()
         {
             InitializeComponent();
+
+            //DataContext = new DataObject();
+
+            //ItemStorageManager.ListBoxItemsFound   = new ListBoxItems(ref ListBoxFoundItems, ((DataObject)DataContext).ListBoxFoundItems,
+            //    ButtonUpdateItemBasedOnNameLength_Click, ButtonJumpToWholeItem_Click, ButtonJumpToID_Click, ButtonJumpToName_Click,
+            //    ButtonJumpToDescription_Click);
+            //ItemStorageManager.ListBoxItemsStored  = new ListBoxItems(ref ListBoxStoredItems, ((DataObject)DataContext).ListBoxStoredItems,
+            //    ButtonUpdateItemBasedOnNameLength_Click, ButtonJumpToWholeItem_Click, ButtonJumpToID_Click, ButtonJumpToName_Click,
+            //    ButtonJumpToDescription_Click);
 
             //FontFamily unicodeFont = new FontFamily("SimHei");
 
