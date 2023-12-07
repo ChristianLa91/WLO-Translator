@@ -1,0 +1,24 @@
+﻿<Window x:Class="WLO_Translator_WPF.WindowSettings"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:WLO_Translator_WPF"
+        mc:Ignorable="d"
+        Title="Settings" Height="352" Width="670" Closed="SettingsWindow_Closed">
+    <Grid Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}">
+        <Frame Margin="165,10,10,40" BorderBrush="#FFAAAAAA" BorderThickness="1,1,1,1">
+            <Frame.Content>
+                <Grid x:Name="GridSettings" Margin="16,16,0,0"/>
+            </Frame.Content>
+        </Frame>
+        <TreeView x:Name="TreeViewSettings" HorizontalAlignment="Left" Width="150" Margin="10,33,0,10">
+            <TreeViewItem x:Name="TreeViewItemGeneral" Header="General" Selected="TreeViewItemSettings_Selected"/>
+            <!--<TreeViewItem x:Name="TreeViewItemPaths" Header="Paths" Selected="TreeViewItemSettings_Selected"/>
+            <TreeViewItem x:Name="TreeViewItemClientStarter" Header="Client Starter" Selected="TreeViewItemSettings_Selected"/>-->
+        </TreeView>
+        <Button x:Name="ButtonOK" Content="OK" Margin="0,0,115,10" Height="20" VerticalAlignment="Bottom" HorizontalAlignment="Right" Width="100" Click="ButtonOK_Click"/>
+        <Button x:Name="ButtonCancel" Content="Cancel" Margin="0,0,10,10" Height="20" VerticalAlignment="Bottom" HorizontalAlignment="Right" Width="100" Click="ButtonCancel_Click" IsCancel="True"/>
+        <TextBox x:Name="TextBoxSearchBar" HorizontalAlignment="Left" Margin="10,10,0,0" Text="" TextWrapping="Wrap" VerticalAlignment="Top" Width="150" TextChanged="TextBoxSearchBar_TextChanged"/>
+    </Grid>
+</Window>
