@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:WLO_Translator_WPF"
         mc:Ignorable="d"
-        Title="About WLO Translator" Height="204.888" Width="254.47" ResizeMode="NoResize">
+        Title="About WLO Translator" Height="204.888" Width="254.47" ResizeMode="NoResize" Topmost="True">
     <Grid>
         <Label Content="WLO Translator" Margin="32,-3,0,0" VerticalAlignment="Top" FontSize="24" FontWeight="Bold" HorizontalAlignment="Left" Width="184"/>
         <Label Content="Version 1.0.0" Margin="85,29,85,0" Height="26" VerticalAlignment="Top"/>

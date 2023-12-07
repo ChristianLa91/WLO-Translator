@@ -10,6 +10,7 @@ using ScintillaNET.WPF;
 using System.Windows.Controls;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace WLO_Translator_WPF
 {
@@ -18,31 +19,100 @@ namespace WLO_Translator_WPF
     /// </summary>
     public partial class MainWindow : Window
     {
-        private OpenFileDialog          mOpenFileDialog;
-        private FileManager             mFileManager;
+        private OpenFileDialog  mOpenFileDialog;
+        private FileManager     mFileManager;
+        private string          mWindowTitle;
 
         public MainWindow()
         {
             InitializeComponent();
 
-            //DataContext = new DataObject();
+            mWindowTitle = Title;
 
-            //ItemStorageManager.ListBoxItemsFound   = new ListBoxItems(ref ListBoxFoundItems, ((DataObject)DataContext).ListBoxFoundItems,
-            //    ButtonUpdateItemBasedOnNameLength_Click, ButtonJumpToWholeItem_Click, ButtonJumpToID_Click, ButtonJumpToName_Click,
-            //    ButtonJumpToDescription_Click);
-            //ItemStorageManager.ListBoxItemsStored  = new ListBoxItems(ref ListBoxStoredItems, ((DataObject)DataContext).ListBoxStoredItems,
-            //    ButtonUpdateItemBasedOnNameLength_Click, ButtonJumpToWholeItem_Click, ButtonJumpToID_Click, ButtonJumpToName_Click,
-            //    ButtonJumpToDescription_Click);
+            Grid[]          frontGrids      = new Grid[] { GridFrontLeft, GridFrontMiddle, GridFrontRight };
+            GroupBox[]      groupBoxes      = new GroupBox[] { GroupBoxItem, GroupBoxItemSearchOptions };
+            CheckBox[]      checkBoxes      = (GroupBoxItemSearchOptions.Content as Grid).Children.OfType<CheckBox>().ToArray();            
+            Button[]        buttons         = GetAllObjectsOfTypeFromGridFronts<Button>();
+            GridSplitter[]  gridSplitters   = new GridSplitter[] { GridSplitterLeft, GridSplitterRight };
+            Label[]         labels          = GetAllObjectsOfTypeFromGridFronts<Label>();
+            ListBox[]       listBoxes       = new ListBox[] { ListBoxFoundItems, ListBoxStoredItems };
 
-            //FontFamily unicodeFont = new FontFamily("SimHei");
+            ThemeManager.Initialize(ref GridBack, ref frontGrids, ref MenuMain, ref ToolBarMain, ref groupBoxes, ref checkBoxes,
+                ref buttons, ref gridSplitters, ref labels, ref scintillaTextBox, ref listBoxes);
 
-            //scintillaTextBox.FontFamily = unicodeFont;
             EditingCommands.ToggleInsert.Execute(null, scintillaTextBox);
-            //scintillaTextBox.Scintilla.Width = 500;
 
+            ListBoxFoundItems.MouseDoubleClick += ListBoxFoundItems_MouseDoubleClick;
+            ListBoxFoundItems.MouseRightButtonUp += ListBoxFoundItems_MouseRightButtonUp;
             mFileManager = new FileManager(Dispatcher, ref scintillaTextBox, ref ListBoxFoundItems, ref ListBoxStoredItems,
                 ButtonUpdateItemBasedOnNameLength_Click, ButtonJumpToWholeItem_Click, ButtonJumpToID_Click, ButtonJumpToName_Click,
-                ButtonJumpToDescription_Click);
+                ButtonJumpToDescription_Click, ButtonJumpToExtra1_Click, ButtonJumpToExtra2_Click);
+        }
+
+        private T[] GetAllObjectsOfTypeFromGridFronts<T>()
+        {
+            List<T> typeList    = (GroupBoxItem.Content as Grid).Children.OfType<T>().ToList();
+            List<T> typeList1   = GridFrontLeft.Children.OfType<T>().ToList();
+            List<T> typeList2   = GridFrontMiddle.Children.OfType<T>().ToList();
+            List<T> typeList3   = GridFrontRight.Children.OfType<T>().ToList();
+            typeList.AddRange(typeList1);
+            typeList.AddRange(typeList2);
+            typeList.AddRange(typeList3);
+            return typeList.ToArray();
+        }
+
+        private void ListBoxFoundItems_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            ButtonOpenItemInfo_Click(sender, e);
+        }
+
+        private void ListBoxFoundItems_MouseRightButtonUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            OpenItemRightClickMenu((Item)ListBoxFoundItems.SelectedItem);
+        }
+
+        private void OpenItemRightClickMenu(Item item)
+        {
+            ContextMenu itemRightClickMenu = (ContextMenu)FindResource("ItemRightClickMenu");            
+
+            foreach (object itemObject in itemRightClickMenu.Items)
+            {
+                if (itemObject.GetType() != typeof(MenuItem))
+                    continue;
+
+                MenuItem menuItem = (MenuItem)itemObject;
+                menuItem.Tag = item;
+                switch (menuItem.Name)
+                {
+                    case "MenuItemUpdate":
+                        menuItem.Click += ButtonUpdateItemBasedOnNameLength_Click;
+                        break;
+                    case "MenuItemJumpToWholeItem":
+                        menuItem.Click += ButtonJumpToWholeItem_Click;
+                        break;
+                    case "MenuItemJumpToID":
+                        menuItem.Click += ButtonJumpToID_Click;
+                        break;
+                    case "MenuItemJumpToName":
+                        menuItem.Click += ButtonJumpToName_Click;
+                        break;
+                    case "MenuItemJumpToDescription":
+                        menuItem.Click += ButtonJumpToDescription_Click;
+                        break;
+                    case "MenuItemJumpToExtra1":
+                        menuItem.Click += ButtonJumpToExtra1_Click;
+                        break;
+                    case "MenuItemJumpToExtra2":
+                        menuItem.Click += ButtonJumpToExtra2_Click;
+                        break;
+                    case "MenuItemCopyItemID":
+                        menuItem.Click += ButtonCopyItemID_Click;
+                        break;
+                }
+            }
+
+            itemRightClickMenu.Placement = System.Windows.Controls.Primitives.PlacementMode.MousePoint;
+            itemRightClickMenu.IsOpen = true;
         }
 
         private void ButtonOpenFileToTranslate_Click(object sender, RoutedEventArgs e)
@@ -51,42 +121,158 @@ namespace WLO_Translator_WPF
 
             if (mOpenFileDialog.ShowDialog() == true)
             {
-                LabelFileToTranslatePath.Content = mOpenFileDialog.FileName;
-                mFileManager.OpenFileToTranslate(mOpenFileDialog.FileName);
+                Title = mWindowTitle + " | " + mOpenFileDialog.FileName;
+                if (mFileManager.OpenFileToTranslate(mOpenFileDialog.FileName))
+                {
+                    ComboBoxSelectedEncoding.SelectedIndex = 0;
+                    ClearSearchBarsAndSearchOptions();
+                    UpdateRightClickMenuAndItemButtons();
+                }
             }
+        }
+
+        private void ClearSearchBarsAndSearchOptions()
+        {
+            TextBoxItemSearchBar.Text           = "";
+            TextBoxFileContentSearchBar.Text    = "";
+
+            foreach (CheckBox checkBox in (GroupBoxItemSearchOptions.Content as Grid).Children.OfType<CheckBox>())
+                checkBox.IsChecked = false;
+        }
+
+        private void UpdateRightClickMenuAndItemButtons()
+        {
+            ContextMenu itemRightClickMenu = (ContextMenu)FindResource("ItemRightClickMenu");
+
+            if (mFileManager.FileItemProperties.FileName == FileName.MARK)
+            {
+                (itemRightClickMenu.Items[6] as MenuItem).Visibility = Visibility.Visible;
+                (itemRightClickMenu.Items[6] as MenuItem).IsEnabled  = true;
+                (itemRightClickMenu.Items[7] as MenuItem).Visibility = Visibility.Visible;
+                (itemRightClickMenu.Items[7] as MenuItem).IsEnabled  = true;
+                ButtonJumpToExtra1.IsEnabled    = true;
+                ButtonJumpToExtra1.Visibility   = Visibility.Visible;
+                ButtonJumpToExtra2.IsEnabled    = true;
+                ButtonJumpToExtra2.Visibility   = Visibility.Visible;
+            }
+            else
+            {
+                (itemRightClickMenu.Items[6] as MenuItem).Visibility = Visibility.Collapsed;
+                (itemRightClickMenu.Items[6] as MenuItem).IsEnabled  = false;
+                (itemRightClickMenu.Items[7] as MenuItem).Visibility = Visibility.Collapsed;
+                (itemRightClickMenu.Items[7] as MenuItem).IsEnabled  = false;
+                ButtonJumpToExtra1.IsEnabled    = false;
+                ButtonJumpToExtra1.Visibility   = Visibility.Hidden;
+                ButtonJumpToExtra2.IsEnabled    = false;
+                ButtonJumpToExtra2.Visibility   = Visibility.Hidden;
+            }
+        }
+
+        public void InitializeItemSearch()
+        {
+            ItemSearch.UpdateStoredAndFoundItemsWhileSearchingLists(ref ListBoxFoundItems, ref ListBoxStoredItems);
+        }
+
+        private Item GetSelectedItem(object sender)
+        {
+            Item item;
+            if ((sender as FrameworkElement).Tag != null)
+                item = (sender as FrameworkElement).Tag as Item;
+            else
+                item = ListBoxFoundItems.SelectedItem as Item;
+
+            return item;
         }
 
         private void ButtonUpdateItemBasedOnNameLength_Click(object sender, RoutedEventArgs e)
         {
-            mFileManager.UpdateItemInfoBasedOnNewNameLength((sender as Button).Tag as Item);
+            Item item = GetSelectedItem(sender);
+            if (item == null)
+                return;
+
+            mFileManager.UpdateItemInfoBasedOnNewNameLength(item);
+            (item.Parent as ListBox).SelectedItem = item;
         }
 
-        private void ButtonJumpToWholeItem_Click(object sender, System.Windows.RoutedEventArgs e)
+        private void ButtonJumpToWholeItem_Click(object sender, RoutedEventArgs e)
         {
+            Item item = GetSelectedItem(sender);
+            if (item == null)
+                return;
+
             ColorRichTextBoxText(ref scintillaTextBox, Colors.Green,
-                ((sender as Button).Tag as Item).ItemStartPosition,
-                ((sender as Button).Tag as Item).ItemEndPosition);
+                item.ItemStartPosition,
+                item.ItemEndPosition + 1);
+            (item.Parent as ListBox).SelectedItem = item;
         }
 
-        private void ButtonJumpToID_Click(object sender, System.Windows.RoutedEventArgs e)
+        private void ButtonJumpToID_Click(object sender, RoutedEventArgs e)
         {
+            Item item = GetSelectedItem(sender);
+            if (item == null)
+                return;
+
             ColorRichTextBoxText(ref scintillaTextBox, Colors.Orange,
-                ((sender as Button).Tag as Item).IDStartPosition,
-                ((sender as Button).Tag as Item).IDEndPosition);
+                item.IDStartPosition,
+                item.IDEndPosition + 1);
+            (item.Parent as ListBox).SelectedItem = item;
         }
 
-        private void ButtonJumpToName_Click(object sender, System.Windows.RoutedEventArgs e)
+        private void ButtonJumpToName_Click(object sender, RoutedEventArgs e)
         {
+            Item item = GetSelectedItem(sender);
+            if (item == null)
+                return;
+
             ColorRichTextBoxText(ref scintillaTextBox, Colors.Red,
-                ((sender as Button).Tag as Item).NameStartPosition,
-                ((sender as Button).Tag as Item).NameEndPosition);
+                item.NameStartPosition,
+                item.NameEndPosition);
+            (item.Parent as ListBox).SelectedItem = item;
         }
 
-        private void ButtonJumpToDescription_Click(object sender, System.Windows.RoutedEventArgs e)
+        private void ButtonJumpToDescription_Click(object sender, RoutedEventArgs e)
         {
+            Item item = GetSelectedItem(sender);
+            if (item == null)
+                return;
+
             ColorRichTextBoxText(ref scintillaTextBox, Colors.Green,
-                ((sender as Button).Tag as Item).DescriptionStartPosition,
-                ((sender as Button).Tag as Item).DescriptionEndPosition);
+                item.DescriptionStartPosition,
+                item.DescriptionEndPosition);
+            (item.Parent as ListBox).SelectedItem = item;
+        }
+
+        private void ButtonJumpToExtra1_Click(object sender, RoutedEventArgs e)
+        {
+            Item item = GetSelectedItem(sender);
+            if (item == null)
+                return;
+
+            ColorRichTextBoxText(ref scintillaTextBox, Colors.Green,
+                item.Extra1StartPosition,
+                item.Extra1EndPosition);
+            (item.Parent as ListBox).SelectedItem = item;
+        }
+
+        private void ButtonJumpToExtra2_Click(object sender, RoutedEventArgs e)
+        {
+            Item item = GetSelectedItem(sender);
+            if (item == null)
+                return;
+
+            ColorRichTextBoxText(ref scintillaTextBox, Colors.Green,
+                item.Extra2StartPosition,
+                item.Extra2EndPosition);
+            (item.Parent as ListBox).SelectedItem = item;
+        }
+
+        private void ButtonCopyItemID_Click(object sender, RoutedEventArgs e)
+        {
+            Item item = GetSelectedItem(sender);
+            if (item == null)
+                return;
+
+            Clipboard.SetText(item.TextBlockID.Text);
         }
 
         public void ColorRichTextBoxText(ref ScintillaWPF richTextBox, Color color, int textStartPosition, int textEndPosition)
@@ -162,13 +348,27 @@ namespace WLO_Translator_WPF
 
         private void ButtonTransferAllItemsToStoredItems_Click(object sender, RoutedEventArgs e)
         {
-            foreach (Item item in ListBoxFoundItems.Items)
-                ListBoxStoredItems.Items.Add(item.Clone());
+            ItemSearch.StoreAllFoundItems(ref ListBoxStoredItems);
+        }
+
+        private void ButtonTransferSelectedItemsToStoredItems_Click(object sender, RoutedEventArgs e)
+        {
+            ItemSearch.StoreSelectedFoundItems(ref ListBoxFoundItems, ref ListBoxStoredItems);
         }
 
         private void MenuItemOpen_Click(object sender, RoutedEventArgs e)
         {
             ButtonOpenFileToTranslate_Click(sender, e);
+        }
+
+        private void MenuItemClose_Click(object sender, RoutedEventArgs e)
+        {
+            Title = mWindowTitle;
+            mFileManager.CloseFileToTranslate();
+
+            ComboBoxSelectedEncoding.SelectedIndex = 0;
+            ClearSearchBarsAndSearchOptions();
+            ItemSearch.UpdateStoredAndFoundItemsWhileSearchingLists(ref ListBoxFoundItems, ref ListBoxStoredItems);
         }
 
         private void MenuItemSave_Click(object sender, RoutedEventArgs e)
@@ -177,12 +377,23 @@ namespace WLO_Translator_WPF
                 return;
 
             mFileManager.SaveAssociatedStoredItemData(mOpenFileDialog.FileName, ref ListBoxStoredItems, ref LabelSaved);
+        }
 
-            //FileManager.JsonFileUtils.SimpleWrite(ref ListBoxStoredItems, mOpenFileDialog.FileName);
+        private void ButtonAddNewStoredItem_Click(object sender, RoutedEventArgs e)
+        {
+            Item item = new Item(ButtonUpdateItemBasedOnNameLength_Click, ButtonJumpToWholeItem_Click, ButtonJumpToID_Click,
+                ButtonJumpToName_Click, ButtonJumpToDescription_Click, ButtonJumpToExtra1_Click, ButtonJumpToExtra2_Click,
+                mFileManager.FileItemProperties.HasDescription, mFileManager.FileItemProperties.HasExtras);
+            item.NameStartPosition  = scintillaTextBox.SelectionStart;
+            item.NameEndPosition    = scintillaTextBox.SelectionEnd;
+            item.Name               = scintillaTextBox.SelectedText;
+            ItemSearch.AddStoredItem(ref item, ref ListBoxStoredItems);
+            item.Focus();
         }
 
         private void ButtonClearStoredItems_Click(object sender, RoutedEventArgs e)
         {
+            ItemSearch.ClearStoredItemsWhileSearching();
             ListBoxStoredItems.Items.Clear();
         }
 
@@ -196,7 +407,7 @@ namespace WLO_Translator_WPF
             switch (selectedEncoding)
             {
                 case "ANSI":
-                    unicodeFont = new FontFamily("Segoi UI");
+                    unicodeFont = new FontFamily("Courier New");
                     encoding = Encoding.GetEncoding(1252);
                     scintillaTextBox.FontFamily = unicodeFont;
                     break;
@@ -213,12 +424,10 @@ namespace WLO_Translator_WPF
                 case "GB2312":
                     unicodeFont = new FontFamily("SimHei");
                     encoding = Encoding.GetEncoding("gb2312");
-                    //encoding = Encoding.GetEncoding("gb18030");
                     break;
                 case "BIG5":
                     unicodeFont = new FontFamily("SimHei");
                     encoding = Encoding.GetEncoding("big5");
-                    //encoding = Encoding.GetEncoding("gb18030");
                     break;
                 default:
                     throw new Exception("Encoding \"" + selectedEncoding + "\" is not found");
@@ -229,49 +438,77 @@ namespace WLO_Translator_WPF
 
             scintillaTextBox.FontFamily = unicodeFont;
             if (scintillaTextBox.Text != "")
+            {
+                scintillaTextBox.ReadOnly = false;
                 scintillaTextBox.Text = TextManager.CleanStringFromNewLinesAndBadChars(
                     TextManager.GetStringWithEncoding(mFileManager.OpenFileText, encoding));
+                scintillaTextBox.ReadOnly = true;
+            }
 
             foreach (Item item in ListBoxFoundItems.Items)
             {
                 item.SetEncoding(unicodeFont, encoding);
             }
-        }              
+        }        
 
         private void ButtonBeginTranslate_Click(object sender, RoutedEventArgs e)
         {
-            //var task = BeginTranslateAsync();
             List<ItemData> foundItemData = new List<ItemData>();
             foreach (Item item in ListBoxFoundItems.Items)
                 foundItemData.Add(item.ToItemData());
+
             List<ItemData> storedItemData = new List<ItemData>();
             foreach (Item item in ListBoxStoredItems.Items)
                 storedItemData.Add(item.ToItemData());
+
             Task task = BeginTranslateAsync(mFileManager.OpenFileText, foundItemData, storedItemData);
-
-            //task.Wait();
-
-            //task.Dispose();
         }
 
         private async Task BeginTranslateAsync(string text, List<ItemData> foundItemData, List<ItemData> storedItemData)
         {
-            var task = await Task.Run(() => TranslationManager.TranslateAsync(text, foundItemData, storedItemData));
+            var task = await Task.Run(() => Translation.TranslateAsync(text, foundItemData, storedItemData));
 
-            mFileManager.TranslatedFileText = task;
-            scintillaTextBox.ReadOnly       = false;
-            scintillaTextBox.Text           = TextManager.CleanStringFromNewLinesAndBadChars(task);
-            scintillaTextBox.ReadOnly       = true;
+            if (task != null)
+            {
+                mFileManager.TranslatedFileText = task;
+                scintillaTextBox.ReadOnly       = false;
+                scintillaTextBox.Text           = TextManager.CleanStringFromNewLinesAndBadChars(task);
+                scintillaTextBox.ReadOnly       = true;
+            }
+        }
+
+        private void TextBoxFileContentSearchBar_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            FileContentSearch.SearchForString((sender as TextBox).Text, ref scintillaTextBox);
+        }
+
+        private void ButtonFindPreviousMatchInFileContent_Click(object sender, RoutedEventArgs e)
+        {
+            FileContentSearch.SearchPrevious(ref scintillaTextBox);
+        }
+
+        private void ButtonFindNextMatchInFileContent_Click(object sender, RoutedEventArgs e)
+        {
+            FileContentSearch.SearchNext(ref scintillaTextBox);
         }
 
         private void TextBoxItemSearchBar_TextChanged(object sender, TextChangedEventArgs e)            { UpdateVisableItems(); }
         private void CheckBoxShowItemsWithBadCharsOnly_Click(object sender, RoutedEventArgs e)          { UpdateVisableItems(); }
+        private void CheckBoxShowItemsWithUnusualCharsOnly_Click(object sender, RoutedEventArgs e)      { UpdateVisableItems(); }
         private void CheckBoxShowItemsWithoutDescriptionsOnly_Click(object sender, RoutedEventArgs e)   { UpdateVisableItems(); }
-
-        private void UpdateVisableItems()
+        private void CheckBoxShowItemsWithNoMatch_Click(object sender, RoutedEventArgs e)               { UpdateVisableItems(); }
+        private void ComboBoxSearchOption_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            ItemStorageManager.UpdateVisableItems(ref ListBoxFoundItems, ref ListBoxStoredItems,
-                TextBoxItemSearchBar.Text, CheckBoxShowItemsWithBadCharsOnly.IsChecked.Value, CheckBoxShowItemsWithoutDescriptionsOnly.IsChecked.Value);
+            UpdateVisableItems((ItemSearch.SearchOption)ComboBoxSearchOption.SelectedIndex);
+        }
+        private void CheckBoxShowItemsWithoutFirstCharLetter_Click(object sender, RoutedEventArgs e) { UpdateVisableItems(); }
+
+        private void UpdateVisableItems(ItemSearch.SearchOption searchOption = ItemSearch.SearchOption.DEFAULT)
+        {
+            ItemSearch.UpdateVisableItems(ref ListBoxFoundItems, ref ListBoxStoredItems,
+                TextBoxItemSearchBar.Text, CheckBoxShowItemsWithBadChars.IsChecked.Value, CheckBoxShowItemsWithUnusualChars.IsChecked.Value,
+                CheckBoxShowItemsWithoutDescriptions.IsChecked.Value, CheckBoxShowItemsWithSameIDs.IsChecked.Value,
+                CheckBoxShowItemsWithNoMatch.IsChecked.Value, CheckBoxShowItemsWithoutFirstCharLetter.IsChecked.Value, searchOption);
         }
 
         private void MenuItemExportFile_Click(object sender, RoutedEventArgs e)
@@ -279,15 +516,81 @@ namespace WLO_Translator_WPF
             if (scintillaTextBox.Text == null || scintillaTextBox.Text == "")
                 return;
 
-            string text = "";
-            if (mFileManager.TranslatedFileText != null && mFileManager.TranslatedFileText != "")
-                text = mFileManager.TranslatedFileText;
-            else if (mFileManager.OpenFileText != null && mFileManager.OpenFileText != "")
-                text = mFileManager.OpenFileText;
-            else
+            string fileName = mFileManager.ExportFile();
+
+            if (fileName == "cancelled")
                 return;
 
-            File.WriteAllText(".\\testexportfile.dat", text, Encoding.GetEncoding(1252)/*Encoding.GetEncoding("big5")*/);
+            if (fileName != null)
+                LabelSaved.Content = "File " + Path.GetFileName(fileName) + " exported";
+            else
+                LabelSaved.Content = "File export failed";
         }
+
+        private void ButtonOpenItemInfo_Click(object sender, RoutedEventArgs e)
+        {
+            Item item = (Item)ListBoxFoundItems.SelectedItem;
+            if (item == null)
+                return;
+
+            string itemData = scintillaTextBox.Text.Substring(item.ItemStartPosition, item.ItemEndPosition - item.ItemStartPosition + 1);
+            WindowItemInfo windowItemInfo           = new WindowItemInfo(item.Name, itemData);
+            windowItemInfo.WindowStartupLocation    = WindowStartupLocation.CenterOwner;
+            windowItemInfo.Owner                    = this;
+
+            windowItemInfo.ShowDialog();
+        }
+
+        private void ListBoxStoredItems_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if (e.Key == System.Windows.Input.Key.Delete && ListBoxStoredItems.SelectedItem != null)
+            {
+                int selectedIndex = ListBoxStoredItems.Items.IndexOf(ListBoxStoredItems.SelectedItem);
+                ListBoxStoredItems.Items.Remove(ListBoxStoredItems.SelectedItem);
+
+                // Set focus on the next item
+                if (ListBoxStoredItems.Items.Count > selectedIndex)
+                    (ListBoxStoredItems.Items[selectedIndex] as Item).Focus();
+                else if (ListBoxStoredItems.Items.Count == 1)
+                    (ListBoxStoredItems.Items[0] as Item).Focus();
+                else if (ListBoxStoredItems.Items.Count > selectedIndex - 1)
+                    (ListBoxStoredItems.Items[selectedIndex - 1] as Item).Focus();
+            }
+        }
+
+        private void ButtonOpenTextReversed_Click(object sender, RoutedEventArgs e)
+        {
+            string selectedText = scintillaTextBox.SelectedText;
+            if (selectedText == "")
+                return;
+            
+            WindowOpenTextReversed windowItemInfo = new WindowOpenTextReversed(selectedText);
+            windowItemInfo.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+            windowItemInfo.Owner = this;
+
+            windowItemInfo.ShowDialog();
+        }
+
+        private void ButtonSelectAllDataLengthLocations_Click(object sender, RoutedEventArgs e)
+        {
+            scintillaTextBox.ClearSelections();
+
+            foreach (Item item in ListBoxFoundItems.Items)
+            {
+                scintillaTextBox.AddSelection(item.ItemStartPosition, item.ItemStartPosition + 1);
+                scintillaTextBox.AddSelection(item.DescriptionLengthPosition, item.DescriptionLengthPosition + 1);
+            }
+
+            scintillaTextBox.SetSelectionForeColor(true, Colors.Green);
+        }
+
+        private void MenuItemSettings_Click(object sender, RoutedEventArgs e)
+        {
+            WindowSettings windowSettings = new WindowSettings();
+            windowSettings.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+            windowSettings.Owner = this;
+
+            windowSettings.ShowDialog();
+        }        
     }
 }
