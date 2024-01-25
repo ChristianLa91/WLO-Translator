@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:WLO_Translator_WPF"
         mc:Ignorable="d"
-        Title="Loading Bar" Height="127.955" Width="402.793" Topmost="True" ResizeMode="NoResize" Closing="LoadingBarWindow_Closing">
+        Title="Loading Bar" Height="127.955" Width="402.793" ResizeMode="NoResize" Closing="LoadingBarWindow_Closing">
     <Grid>
         <ProgressBar x:Name="ProgressBar" HorizontalAlignment="Left" Height="30" Margin="18,30,0,0" VerticalAlignment="Top" Width="350" BorderBrush="#FF5B5B5B"/>
         <Label x:Name="LabelText" Content="&lt;Loading Bar Text&gt;" HorizontalAlignment="Left" Margin="18,1,0,0" VerticalAlignment="Top"/>

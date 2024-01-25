@@ -11,6 +11,6 @@
         <Label Content="Version 1.0.0" Margin="85,29,85,0" Height="26" VerticalAlignment="Top"/>
         <TextBox Margin="24,55,24,40" TextWrapping="Wrap" Text="Written by Christian Larsson
                  Special thanks to Viken, Landy and Rifeldo"/>
-        <Button x:Name="ButtonOK" Content="OK" Margin="80,0,80,7" Height="25" VerticalAlignment="Bottom" Click="ButtonOK_Click" IsDefault="True"/>
+        <Button x:Name="ButtonOK" Content="OK" Margin="80,0,80,7" Height="25" VerticalAlignment="Bottom" Click="ButtonOK_Click" IsDefault="True" Background="#FFF1F1F1"/>
     </Grid>
 </Window>

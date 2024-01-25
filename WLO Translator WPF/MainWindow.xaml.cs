@@ -11,6 +11,7 @@ using System.Windows.Controls;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Linq;
+using System.Collections.ObjectModel;
 
 namespace WLO_Translator_WPF
 {
@@ -19,13 +20,22 @@ namespace WLO_Translator_WPF
     /// </summary>
     public partial class MainWindow : Window
     {
-        private OpenFileDialog  mOpenFileDialog;
-        private FileManager     mFileManager;
-        private string          mWindowTitle;
+        private OpenFileDialog              mOpenFileDialog;
+        private FileManager                 mFileManager;
+        private string                      mWindowTitle;
+        private Point?                      mCursorOldPosition = null;
+
+        private ObservableCollection<Item>  mLazyLoadFoundItemData;
+        private ObservableCollection<Item>  mLazyLoadStoredItemData;
 
         public MainWindow()
         {
             InitializeComponent();
+
+            mLazyLoadFoundItemData  = new ObservableCollection<Item>();
+            mLazyLoadStoredItemData = new ObservableCollection<Item>();
+            ListBoxFoundItems.ItemsSource   = mLazyLoadFoundItemData;
+            ListBoxStoredItems.ItemsSource  = mLazyLoadStoredItemData;
 
             mWindowTitle = Title;
 
@@ -36,17 +46,24 @@ namespace WLO_Translator_WPF
             GridSplitter[]  gridSplitters   = new GridSplitter[] { GridSplitterLeft, GridSplitterRight };
             Label[]         labels          = GetAllObjectsOfTypeFromGridFronts<Label>();
             ListBox[]       listBoxes       = new ListBox[] { ListBoxFoundItems, ListBoxStoredItems };
+            TextBox[]       textBoxes       = new TextBox[] { TextBoxFileContentSearchBar };
+            TextBlock[]     textBlocks      = new TextBlock[] { ProjectFileName };
 
             ThemeManager.Initialize(ref GridBack, ref frontGrids, ref MenuMain, ref ToolBarMain, ref groupBoxes, ref checkBoxes,
-                ref buttons, ref gridSplitters, ref labels, ref scintillaTextBox, ref listBoxes);
+                ref buttons, ref gridSplitters, ref labels, ref scintillaTextBox, ref listBoxes,
+                ref ButtonMinimize, ref ButtonResize, ref ButtonClose, ref textBoxes, ref textBlocks, ref GridBackgroundProjectFileName);
 
             EditingCommands.ToggleInsert.Execute(null, scintillaTextBox);
 
             ListBoxFoundItems.MouseDoubleClick += ListBoxFoundItems_MouseDoubleClick;
             ListBoxFoundItems.MouseRightButtonUp += ListBoxFoundItems_MouseRightButtonUp;
-            mFileManager = new FileManager(Dispatcher, ref scintillaTextBox, ref ListBoxFoundItems, ref ListBoxStoredItems,
-                ButtonUpdateItemBasedOnNameLength_Click, ButtonJumpToWholeItem_Click, ButtonJumpToID_Click, ButtonJumpToName_Click,
-                ButtonJumpToDescription_Click, ButtonJumpToExtra1_Click, ButtonJumpToExtra2_Click);
+            mFileManager = new FileManager(Dispatcher, ref scintillaTextBox, ref LabelReportInfo, ref ListBoxFoundItems,
+                ref ListBoxStoredItems, ButtonUpdateItemBasedOnNameLength_Click, ButtonJumpToWholeItem_Click, ButtonJumpToID_Click,
+                ButtonJumpToName_Click, ButtonJumpToDescription_Click, ButtonJumpToExtra1_Click, ButtonJumpToExtra2_Click);
+
+            mFileManager.LoadProgramSettings();
+
+            MaxHeight = SystemParameters.MaximizedPrimaryScreenHeight - 8d;
         }
 
         private T[] GetAllObjectsOfTypeFromGridFronts<T>()
@@ -73,7 +90,7 @@ namespace WLO_Translator_WPF
 
         private void OpenItemRightClickMenu(Item item)
         {
-            ContextMenu itemRightClickMenu = (ContextMenu)FindResource("ItemRightClickMenu");            
+            ContextMenu itemRightClickMenu = (ContextMenu)FindResource("ItemRightClickMenu");
 
             foreach (object itemObject in itemRightClickMenu.Items)
             {
@@ -120,13 +137,14 @@ namespace WLO_Translator_WPF
             mOpenFileDialog = new OpenFileDialog();
 
             if (mOpenFileDialog.ShowDialog() == true)
-            {
-                Title = mWindowTitle + " | " + mOpenFileDialog.FileName;
+            {                
                 if (mFileManager.OpenFileToTranslate(mOpenFileDialog.FileName))
                 {
                     ComboBoxSelectedEncoding.SelectedIndex = 0;
                     ClearSearchBarsAndSearchOptions();
                     UpdateRightClickMenuAndItemButtons();
+
+                    mFileManager.SetProjectOpenFileName(ref GridBackgroundProjectFileName, mOpenFileDialog.FileName);
                 }
             }
         }
@@ -144,7 +162,7 @@ namespace WLO_Translator_WPF
         {
             ContextMenu itemRightClickMenu = (ContextMenu)FindResource("ItemRightClickMenu");
 
-            if (mFileManager.FileItemProperties.FileName == FileName.MARK)
+            if (mFileManager.FileItemProperties.HasExtras)
             {
                 (itemRightClickMenu.Items[6] as MenuItem).Visibility = Visibility.Visible;
                 (itemRightClickMenu.Items[6] as MenuItem).IsEnabled  = true;
@@ -165,6 +183,21 @@ namespace WLO_Translator_WPF
                 ButtonJumpToExtra1.Visibility   = Visibility.Hidden;
                 ButtonJumpToExtra2.IsEnabled    = false;
                 ButtonJumpToExtra2.Visibility   = Visibility.Hidden;
+            }
+
+            if (mFileManager.FileItemProperties.HasDescription)
+            {
+                (itemRightClickMenu.Items[5] as MenuItem).Visibility = Visibility.Visible;
+                (itemRightClickMenu.Items[5] as MenuItem).IsEnabled  = true;
+                ButtonJumpToDescription.IsEnabled    = true;
+                ButtonJumpToDescription.Visibility   = Visibility.Visible;
+            }
+            else
+            {
+                (itemRightClickMenu.Items[5] as MenuItem).Visibility = Visibility.Collapsed;
+                (itemRightClickMenu.Items[5] as MenuItem).IsEnabled  = false;
+                ButtonJumpToDescription.IsEnabled    = false;
+                ButtonJumpToDescription.Visibility   = Visibility.Hidden;
             }
         }
 
@@ -191,7 +224,7 @@ namespace WLO_Translator_WPF
                 return;
 
             mFileManager.UpdateItemInfoBasedOnNewNameLength(item);
-            (item.Parent as ListBox).SelectedItem = item;
+            ListBoxFoundItems.SelectedItem = item;
         }
 
         private void ButtonJumpToWholeItem_Click(object sender, RoutedEventArgs e)
@@ -203,7 +236,7 @@ namespace WLO_Translator_WPF
             ColorRichTextBoxText(ref scintillaTextBox, Colors.Green,
                 item.ItemStartPosition,
                 item.ItemEndPosition + 1);
-            (item.Parent as ListBox).SelectedItem = item;
+            ListBoxFoundItems.SelectedItem = item;
         }
 
         private void ButtonJumpToID_Click(object sender, RoutedEventArgs e)
@@ -215,7 +248,7 @@ namespace WLO_Translator_WPF
             ColorRichTextBoxText(ref scintillaTextBox, Colors.Orange,
                 item.IDStartPosition,
                 item.IDEndPosition + 1);
-            (item.Parent as ListBox).SelectedItem = item;
+            ListBoxFoundItems.SelectedItem = item;
         }
 
         private void ButtonJumpToName_Click(object sender, RoutedEventArgs e)
@@ -227,7 +260,7 @@ namespace WLO_Translator_WPF
             ColorRichTextBoxText(ref scintillaTextBox, Colors.Red,
                 item.NameStartPosition,
                 item.NameEndPosition);
-            (item.Parent as ListBox).SelectedItem = item;
+            ListBoxFoundItems.SelectedItem = item;
         }
 
         private void ButtonJumpToDescription_Click(object sender, RoutedEventArgs e)
@@ -239,7 +272,7 @@ namespace WLO_Translator_WPF
             ColorRichTextBoxText(ref scintillaTextBox, Colors.Green,
                 item.DescriptionStartPosition,
                 item.DescriptionEndPosition);
-            (item.Parent as ListBox).SelectedItem = item;
+            ListBoxFoundItems.SelectedItem = item;
         }
 
         private void ButtonJumpToExtra1_Click(object sender, RoutedEventArgs e)
@@ -251,7 +284,7 @@ namespace WLO_Translator_WPF
             ColorRichTextBoxText(ref scintillaTextBox, Colors.Green,
                 item.Extra1StartPosition,
                 item.Extra1EndPosition);
-            (item.Parent as ListBox).SelectedItem = item;
+            ListBoxFoundItems.SelectedItem = item;
         }
 
         private void ButtonJumpToExtra2_Click(object sender, RoutedEventArgs e)
@@ -263,7 +296,7 @@ namespace WLO_Translator_WPF
             ColorRichTextBoxText(ref scintillaTextBox, Colors.Green,
                 item.Extra2StartPosition,
                 item.Extra2EndPosition);
-            (item.Parent as ListBox).SelectedItem = item;
+            ListBoxFoundItems.SelectedItem = item;
         }
 
         private void ButtonCopyItemID_Click(object sender, RoutedEventArgs e)
@@ -277,15 +310,10 @@ namespace WLO_Translator_WPF
 
         public void ColorRichTextBoxText(ref ScintillaWPF richTextBox, Color color, int textStartPosition, int textEndPosition)
         {
-            richTextBox.SelectionStart = textStartPosition;
-            richTextBox.SelectionEnd = textEndPosition;
-            //richTextBox.Colorize(textStartPosition, textEndPosition);
+            richTextBox.SelectionStart  = textStartPosition;
+            richTextBox.SelectionEnd    = textEndPosition;
             richTextBox.SetSelectionForeColor(true, color);
             richTextBox.ScrollCaret();
-            //richTextBox.AddSelection(textStartPosition, textEndPosition);
-            //richTextBox.Selection.Select(richTextBox.Document.ContentStart.GetPositionAtOffset(textStartPosition),
-            //                    richTextBox.Document.ContentStart.GetPositionAtOffset(textEndPosition));
-            //richTextBox.Selection.ApplyPropertyValue(TextElement.ForegroundProperty, brush);
         }
 
         string ConvertTextFromStringToHex(string text)
@@ -299,7 +327,8 @@ namespace WLO_Translator_WPF
             {
                 if (i == 500)
                     break;
-                Thread currentThread = new Thread(() => { /*Dispatcher.Invoke(() => */resultStrings[i] = ConvertStringFromStringToHex(stingsSplittedBy1000Chars[i], i)/*)*/; });
+                Thread currentThread = new Thread(() => { /*Dispatcher.Invoke(() => */resultStrings[i] = 
+                    ConvertStringFromStringToHex(stingsSplittedBy1000Chars[i], i)/*)*/; });
                 currentThread.Start();
             }
 
@@ -363,7 +392,7 @@ namespace WLO_Translator_WPF
 
         private void MenuItemClose_Click(object sender, RoutedEventArgs e)
         {
-            Title = mWindowTitle;
+            mFileManager.RemoveProjectOpenFileName(ref GridBackgroundProjectFileName);
             mFileManager.CloseFileToTranslate();
 
             ComboBoxSelectedEncoding.SelectedIndex = 0;
@@ -373,10 +402,13 @@ namespace WLO_Translator_WPF
 
         private void MenuItemSave_Click(object sender, RoutedEventArgs e)
         {
+            if (mOpenFileDialog == null)
+                return;
+
             if (mOpenFileDialog.FileName == "")
                 return;
 
-            mFileManager.SaveAssociatedStoredItemData(mOpenFileDialog.FileName, ref ListBoxStoredItems, ref LabelSaved);
+            mFileManager.SaveStoredItemData(mFileManager.FileItemProperties.FileType, ListBoxStoredItems.Items.OfType<IItemBase>().ToList());
         }
 
         private void ButtonAddNewStoredItem_Click(object sender, RoutedEventArgs e)
@@ -393,8 +425,12 @@ namespace WLO_Translator_WPF
 
         private void ButtonClearStoredItems_Click(object sender, RoutedEventArgs e)
         {
-            ItemSearch.ClearStoredItemsWhileSearching();
-            ListBoxStoredItems.Items.Clear();
+            if (MessageBox.Show("Do you really want to clear the stored items?\n(cannot be undone)",
+                "Clear Stored Items", MessageBoxButton.OKCancel, MessageBoxImage.Warning) == MessageBoxResult.OK)
+            {
+                ItemSearch.ClearStoredItemsWhileSearching();
+                ListBoxStoredItems.Items.Clear();
+            }
         }
 
         private void ComboBoxSelectedEncoding_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -446,13 +482,16 @@ namespace WLO_Translator_WPF
             }
 
             foreach (Item item in ListBoxFoundItems.Items)
-            {
                 item.SetEncoding(unicodeFont, encoding);
-            }
         }        
 
         private void ButtonBeginTranslate_Click(object sender, RoutedEventArgs e)
         {
+            if (mFileManager.FileItemProperties == null
+                || ListBoxFoundItems == null || ListBoxFoundItems.Items.Count == 0
+                || ListBoxStoredItems == null || ListBoxStoredItems.Items.Count == 0)
+                return;
+
             List<ItemData> foundItemData = new List<ItemData>();
             foreach (Item item in ListBoxFoundItems.Items)
                 foundItemData.Add(item.ToItemData());
@@ -460,13 +499,12 @@ namespace WLO_Translator_WPF
             List<ItemData> storedItemData = new List<ItemData>();
             foreach (Item item in ListBoxStoredItems.Items)
                 storedItemData.Add(item.ToItemData());
-
-            Task task = BeginTranslateAsync(mFileManager.OpenFileText, foundItemData, storedItemData);
+            _ = BeginTranslateAsync(mFileManager.OpenFileText, foundItemData, storedItemData);
         }
 
         private async Task BeginTranslateAsync(string text, List<ItemData> foundItemData, List<ItemData> storedItemData)
         {
-            var task = await Task.Run(() => Translation.TranslateAsync(text, foundItemData, storedItemData));
+            var task = await Task.Run(() => Translation.TranslateAsync(text, foundItemData, storedItemData, mFileManager.FileItemProperties));
 
             if (task != null)
             {
@@ -522,9 +560,9 @@ namespace WLO_Translator_WPF
                 return;
 
             if (fileName != null)
-                LabelSaved.Content = "File " + Path.GetFileName(fileName) + " exported";
+                LabelReportInfo.Content = "File " + Path.GetFileName(fileName) + " exported";
             else
-                LabelSaved.Content = "File export failed";
+                LabelReportInfo.Content = "File export failed";
         }
 
         private void ButtonOpenItemInfo_Click(object sender, RoutedEventArgs e)
@@ -534,7 +572,7 @@ namespace WLO_Translator_WPF
                 return;
 
             string itemData = scintillaTextBox.Text.Substring(item.ItemStartPosition, item.ItemEndPosition - item.ItemStartPosition + 1);
-            WindowItemInfo windowItemInfo           = new WindowItemInfo(item.Name, itemData);
+            WindowItemInfo windowItemInfo           = new WindowItemInfo("Item Info for " + item.Name, itemData);
             windowItemInfo.WindowStartupLocation    = WindowStartupLocation.CenterOwner;
             windowItemInfo.Owner                    = this;
 
@@ -558,15 +596,15 @@ namespace WLO_Translator_WPF
             }
         }
 
-        private void ButtonOpenTextReversed_Click(object sender, RoutedEventArgs e)
+        private void ButtonOpenText_Click(object sender, RoutedEventArgs e)
         {
             string selectedText = scintillaTextBox.SelectedText;
             if (selectedText == "")
                 return;
             
-            WindowOpenTextReversed windowItemInfo = new WindowOpenTextReversed(selectedText);
-            windowItemInfo.WindowStartupLocation = WindowStartupLocation.CenterOwner;
-            windowItemInfo.Owner = this;
+            WindowItemInfo windowItemInfo           = new WindowItemInfo("File Selected Data", selectedText);
+            windowItemInfo.WindowStartupLocation    = WindowStartupLocation.CenterOwner;
+            windowItemInfo.Owner                    = this;
 
             windowItemInfo.ShowDialog();
         }
@@ -590,7 +628,171 @@ namespace WLO_Translator_WPF
             windowSettings.WindowStartupLocation = WindowStartupLocation.CenterOwner;
             windowSettings.Owner = this;
 
-            windowSettings.ShowDialog();
-        }        
+            if (windowSettings.ShowDialog() == true)
+                mFileManager.SaveProgramSettings();
+        }
+
+        private void ButtonMinimize_Click(object sender, RoutedEventArgs e)
+        {
+            WindowState = WindowState.Minimized;
+        }
+
+        private void SetWindowState(WindowState windowState)
+        {
+            switch (windowState)
+            {
+                case WindowState.Normal:
+                    Image image     = ButtonResize.Content as Image;
+                    image.Source    = ThemeManager.ImageSourceButtonResizeNormal;
+                    WindowState     = WindowState.Normal;
+                    break;
+                case WindowState.Maximized:
+                    image           = ButtonResize.Content as Image;
+                    image.Source    = ThemeManager.ImageSourceButtonResizeFullscreen;
+                    WindowState     = WindowState.Maximized;
+                    break;
+                case WindowState.Minimized:
+                    WindowState     = WindowState.Minimized;
+                    break;
+            }
+        }
+
+        private void ButtonResize_Click(object sender, RoutedEventArgs e)
+        {
+            if (WindowState == WindowState.Normal)
+                SetWindowState(WindowState.Maximized);
+            else if (WindowState == WindowState.Maximized)
+                SetWindowState(WindowState.Normal);
+        }
+
+        private void ButtonClose_Click(object sender, RoutedEventArgs e)
+        {
+            Close();
+        }
+
+        private void MenuMain_PreviewMouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            foreach (MenuItem menuItem in MenuMain.Items)
+                if (menuItem.IsMouseOver)
+                    return;
+
+            ButtonResize_Click(sender, e);
+        }
+
+        private void MenuMain_PreviewMouseLeftButtonUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            mCursorOldPosition = null;
+        }
+
+        private void MenuMain_PreviewMouseMove(object sender, System.Windows.Input.MouseEventArgs e)
+        {
+            foreach (MenuItem menuItem in MenuMain.Items)
+                if (menuItem.IsMouseOver)
+                    return;
+
+            if (e.LeftButton == System.Windows.Input.MouseButtonState.Pressed)
+            {
+                if (WindowState == WindowState.Maximized)
+                {
+                    Point cursorNewPosition = MouseOperations.GetMousePosition();
+
+                    if (mCursorOldPosition != null)
+                    {
+                        double distance = Point.Subtract(mCursorOldPosition.Value, cursorNewPosition).Length;
+                        if (distance > 5d)
+                        {
+                            SetWindowState(WindowState.Normal);
+                            Top = 0;
+                        }
+                    }
+
+                    mCursorOldPosition = cursorNewPosition;
+                }
+
+                DragMove();
+            }
+        }
+
+        private void WindowMain_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            SetWindowState(WindowState);
+        }
+
+        private void MenuMain_PreviewMouseRightButtonUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            ContextMenu topBarRightClickMenu    = (ContextMenu)FindResource("TopBarRightClickMenu");
+            UpdateTopBarRightClickMenu(ref topBarRightClickMenu, WindowState);
+
+            topBarRightClickMenu.Placement      = System.Windows.Controls.Primitives.PlacementMode.MousePoint;
+            topBarRightClickMenu.IsOpen         = true;
+        }
+
+        private void ImageProgramIcon_MouseRightButtonUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            MenuMain_PreviewMouseRightButtonUp(sender, e);
+        }
+
+        private void ImageProgramIcon_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            ContextMenu topBarRightClickMenu        = (ContextMenu)FindResource("TopBarRightClickMenu");
+            UpdateTopBarRightClickMenu(ref topBarRightClickMenu, WindowState);
+
+            topBarRightClickMenu.PlacementTarget    = (UIElement)sender;
+            topBarRightClickMenu.Placement          = System.Windows.Controls.Primitives.PlacementMode.Bottom;
+            topBarRightClickMenu.IsOpen             = true;
+        }
+
+        enum TopBarRightClickMenuItems
+        {
+            RESET,
+            MOVE,
+            RESIZE,
+            MINIMIZE,
+            MAXIMIZE,
+            CLOSE
+        }
+
+        private void UpdateTopBarRightClickMenu(ref ContextMenu contextMenu, WindowState windowState)
+        {
+            MenuItem menuItemReset      = contextMenu.Items[(int)TopBarRightClickMenuItems.RESET    ] as MenuItem;
+            MenuItem menuItemMove       = contextMenu.Items[(int)TopBarRightClickMenuItems.MOVE     ] as MenuItem;
+            MenuItem menuItemResize     = contextMenu.Items[(int)TopBarRightClickMenuItems.RESIZE   ] as MenuItem;
+            MenuItem menuItemMaximize   = contextMenu.Items[(int)TopBarRightClickMenuItems.MAXIMIZE ] as MenuItem;
+
+            if (windowState == WindowState.Normal)
+            {
+                menuItemReset.IsEnabled     = false;
+                menuItemMove.IsEnabled      = true;
+                menuItemResize.IsEnabled    = true;
+                menuItemMaximize.IsEnabled  = true;
+
+                ((Image)menuItemReset.Icon).Source      = (ImageSource)FindResource("TopBarRightClickMenuResizeUnenabled");
+                ((Image)menuItemMaximize.Icon).Source   = (ImageSource)FindResource("TopBarRightClickMenuMaximize");
+            }
+            else if (windowState == WindowState.Maximized)
+            {
+                menuItemReset.IsEnabled     = true;
+                menuItemMove.IsEnabled      = false;
+                menuItemResize.IsEnabled    = false;
+                menuItemMaximize.IsEnabled  = false;
+
+                ((Image)menuItemReset.Icon).Source      = (ImageSource)FindResource("TopBarRightClickMenuResize");
+                ((Image)menuItemMaximize.Icon).Source   = (ImageSource)FindResource("TopBarRightClickMenuMaximizeUnenabled");
+            }
+        }
+
+        private void MenuItemProgramClose_Click(object sender, RoutedEventArgs e)
+        {
+            Close();
+        }
+
+        private void ButtonOpenMultiTranslator_Click(object sender, RoutedEventArgs e)
+        {
+            WindowMultiTranslator windowMultiTranslator = new WindowMultiTranslator(ref mFileManager);
+            windowMultiTranslator.Owner                 = this;
+            windowMultiTranslator.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+
+            windowMultiTranslator.ShowDialog();
+        }
     }
 }

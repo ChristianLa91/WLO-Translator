@@ -1,12 +1,11 @@
 ﻿using ScintillaNET.WPF;
-using System;
 
 namespace WLO_Translator_WPF
 {
     public static class FileContentSearch
     {
         private static string   mSearchStringOld;
-        private static int      mTargetEndOld;
+        private static int?     mTargetEndOld;
 
         enum SearchOption
         {
@@ -17,7 +16,7 @@ namespace WLO_Translator_WPF
 
         public static void SearchForString(string searchString, ref ScintillaWPF scintillaTextBox)
         {
-            mTargetEndOld       = default;
+            mTargetEndOld       = null;
 
             SelectAndScrollToFirstMatch(searchString, ref scintillaTextBox);
 
@@ -35,9 +34,12 @@ namespace WLO_Translator_WPF
         public static void SearchPrevious(ref ScintillaWPF scintillaTextBox)
         {
             SelectAndScrollToFirstMatch(mSearchStringOld, ref scintillaTextBox, SearchOption.SEARCH_PREVIOUS);
+
+            mTargetEndOld = scintillaTextBox.TargetEnd;
         }
 
-        private static void SelectAndScrollToFirstMatch(string searchString, ref ScintillaWPF scintillaTextBox, SearchOption searchOption = SearchOption.SEARCH_FIRST)
+        private static void SelectAndScrollToFirstMatch(string searchString, ref ScintillaWPF scintillaTextBox,
+            SearchOption searchOption = SearchOption.SEARCH_FIRST)
         {
             if (searchString == null || searchString == "") return;
 
@@ -45,19 +47,19 @@ namespace WLO_Translator_WPF
             switch (searchOption)
             {
                 case SearchOption.SEARCH_NEXT:
-                    if (mTargetEndOld == default) return;
-                    scintillaTextBox.TargetStart    = mTargetEndOld;
+                    if (mTargetEndOld == null) return;
+                    scintillaTextBox.TargetStart    = mTargetEndOld.Value;
                     break;
                 case SearchOption.SEARCH_PREVIOUS:
-                    if (mTargetEndOld == default) return;
+                    if (mTargetEndOld == null) return;
                     scintillaTextBox.TargetEnd      = scintillaTextBox.TargetStart;
-                    scintillaTextBox.TargetStart    = mTargetEndOld;
+                    scintillaTextBox.TargetStart    = mTargetEndOld.Value - searchString.Length;
                     break;
             }
 
             if (scintillaTextBox.SearchInTarget(searchString) != -1)
             {
-                scintillaTextBox.SetSelectionBackColor(true, System.Windows.Media.Colors.Red);
+                //scintillaTextBox.SetSelectionBackColor(true, System.Windows.Media.Colors.Red);
                 scintillaTextBox.SelectionStart     = scintillaTextBox.TargetStart;
                 scintillaTextBox.SelectionEnd       = scintillaTextBox.TargetEnd;
                 scintillaTextBox.ScrollCaret();

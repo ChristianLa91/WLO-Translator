@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Text;
+using System.Windows.Controls;
+using System.Windows.Documents;
 
 namespace WLO_Translator_WPF
 {
@@ -159,37 +161,48 @@ namespace WLO_Translator_WPF
             return true;
         }
 
-        public static string GetFileNameWithFirstLettersCapitalized(FileName fileName)
+        public static string GetFileTypeToString(FileType fileType)
         {
             string result;
-            switch (fileName)
+            switch (fileType)
             {
-                case FileName.ACTIONINFO:
+                case FileType.ACTIONINFO:
                     result = "ActionInfo";
                     break;
-                case FileName.ITEM:
+                case FileType.ITEM:
                     result = "Item";
                     break;
-                case FileName.MARK:
+                case FileType.MARK:
                     result = "Mark";
                     break;
-                case FileName.NPC:
+                case FileType.NPC:
                     result = "Npc";
                     break;
-                case FileName.SCENEDATA:
+                case FileType.SCENEDATA:
                     result = "SceneData";
                     break;
-                case FileName.SKILL:
+                case FileType.SKILL:
                     result = "Skill";
                     break;
-                case FileName.TALK:
+                case FileType.TALK:
                     result = "Talk";
                     break;
                 default:
-                    throw new ArgumentException("Name to return for file name \"" + fileName.ToString() + "\" is not implemented");
+                    throw new ArgumentException("Name to return for file name \"" + fileType.ToString() + "\" is not implemented");
             }
 
             return result;
+        }
+
+        public static string GetRichTextBoxText(ref RichTextBox richTextBox)
+        {
+            return new TextRange(richTextBox.Document.ContentStart, richTextBox.Document.ContentEnd).Text;
+        }
+
+        public static void SetRichTextBoxText(ref RichTextBox richTextBox, string text)
+        {
+            richTextBox.Document.Blocks.Clear();
+            richTextBox.Document.Blocks.Add(new Paragraph(new Run(text)));
         }
     }
 }

@@ -2,20 +2,23 @@
 using ScintillaNET.WPF;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Interop;
 using System.Windows.Threading;
 using System.Xml;
 
 namespace WLO_Translator_WPF
 {
-    public enum FileName
+    public enum FileType
     {
         NULL,
         ACTIONINFO,
@@ -30,57 +33,57 @@ namespace WLO_Translator_WPF
 
     public class FileItemProperties
     {
-        public FileName FileName                        { get; private set; } = FileName.NULL;
+        public FileType FileType                        { get; private set; } = FileType.NULL;
         public int      LengthPerItem                   { get; private set; } = -1;
         public int      AfterNameToDescriptionLength    { get; private set; } = -1;
         public bool     HasDescription                  { get; private set; } = true;
         public bool     HasExtras                       { get; private set; } = false;
         public bool     DataFromRightToLeft             { get; private set; } = true;
 
-        public FileItemProperties(FileName fileName)
+        public FileItemProperties(FileType fileType)
         {
-            FileName = fileName;
+            FileType = fileType;
             UpdateProperties();
         }
 
         private void UpdateProperties()
         {
-            switch (FileName)
+            switch (FileType)
             {
-                case FileName.ACTIONINFO:
+                case FileType.ACTIONINFO:
                     LengthPerItem                   = Constants.ACTIONINFO_DATA_LENGTH_PER_ITEM;
                     AfterNameToDescriptionLength    = Constants.ACTIONINFO_DATA_AFTER_NAME_TO_DESCRIPTIONLENGTH_LENGTH;
                     break;
-                case FileName.ALOGINEXE:
+                case FileType.ALOGINEXE:
                     LengthPerItem                   = Constants.ALOGIN_EXE_LENGTH_PER_ITEM;
                     AfterNameToDescriptionLength    = Constants.ALOGIN_EXE_AFTER_NAME_TO_DESCRIPTIONLENGTH_LENGTH;
                     HasDescription                  = false;
                     DataFromRightToLeft             = false;
                     break;
-                case FileName.ITEM:
+                case FileType.ITEM:
                     LengthPerItem                   = Constants.ITEM_DATA_LENGTH_PER_ITEM;
                     AfterNameToDescriptionLength    = Constants.ITEM_DATA_AFTER_NAME_TO_DESCRIPTIONLENGTH_LENGTH;
                     break;                
-                case FileName.MARK:
+                case FileType.MARK:
                     LengthPerItem                   = Constants.MARK_DATA_LENGTH_PER_ITEM;
                     AfterNameToDescriptionLength    = Constants.MARK_DATA_AFTER_NAME_TO_DESCRIPTIONLENGTH_LENGTH;
                     HasExtras                       = true;
                     break;
-                case FileName.NPC:
+                case FileType.NPC:
                     LengthPerItem                   = Constants.NPC_DATA_LENGTH_PER_ITEM;
                     AfterNameToDescriptionLength    = Constants.NPC_DATA_AFTER_NAME_TO_DESCRIPTIONLENGTH_LENGTH;
                     HasDescription                  = false;
                     break;
-                case FileName.SCENEDATA:
+                case FileType.SCENEDATA:
                     LengthPerItem                   = Constants.SCENEDATA_DATA_LENGTH_PER_ITEM;
                     AfterNameToDescriptionLength    = Constants.SCENEDATA_DATA_AFTER_NAME_TO_DESCRIPTIONLENGTH_LENGTH;
                     HasDescription                  = false;
                     break;
-                case FileName.SKILL:
+                case FileType.SKILL:
                     LengthPerItem                   = Constants.SKILL_DATA_LENGTH_PER_ITEM;
                     AfterNameToDescriptionLength    = Constants.SKILL_DATA_AFTER_NAME_TO_DESCRIPTIONLENGTH_LENGTH;
                     break;
-                case FileName.TALK:
+                case FileType.TALK:
                     LengthPerItem                   = Constants.TALK_DATA_LENGTH_PER_ITEM;
                     AfterNameToDescriptionLength    = Constants.TALK_DATA_AFTER_NAME_TO_DESCRIPTIONLENGTH_LENGTH;
                     HasDescription                  = false;
@@ -91,70 +94,121 @@ namespace WLO_Translator_WPF
 
     public class FileManager
     {
-        //private static string mSaveFilePath;
-        private string              mFileEnding = ".wtsi";
-        private WindowLoadingBar    mWindowLoadingBar;
-        private BackgroundWorker    mBackgroundWorkerStoredItemData;
-        private BackgroundWorker    mBackgroundWorkerFoundItemData;
-        private List<ItemData>      mStoredItemsToAdd;
-        private List<ItemData>      mFoundItemsToAdd;
+        private BackgroundWorker            mBackgroundWorkerStoredItemData;
+        private BackgroundWorker            mBackgroundWorkerFoundItemData;
+        private List<ItemData>              mFoundItemsToAdd;
+        private List<ItemData>              mStoredItemsToAdd;
+        public List<ItemData> GetFoundItems()   { return mFoundItemsToAdd;  }
+        public List<ItemData> GetStoredItems()  { return mStoredItemsToAdd; }
 
-        private ListBox             mListBoxFoundItems;
-        private ListBox             mListBoxStoredItems;
+        private ListBox                     mListBoxFoundItems;
+        private ListBox                     mListBoxStoredItems;
+        private ObservableCollection<Item>  mItemSourceListBoxFoundItemsTemporary;
+        private ObservableCollection<Item>  mItemSourceListBoxStoredItemsTemporary;
 
-        private ScintillaWPF        mScintillaWPFTextBox;
+        private ScintillaWPF                mScintillaWPFTextBox;
 
-        private RoutedEventHandler  mRoutedEventHandlerButtonClickUpdateItem;
-        private RoutedEventHandler  mRoutedEventHandlerButtonClickJumpToWholeItem;
-        private RoutedEventHandler  mRoutedEventHandlerButtonClickJumpToID;
-        private RoutedEventHandler  mRoutedEventHandlerButtonClickJumpToName;
-        private RoutedEventHandler  mRoutedEventHandlerButtonClickJumpToDescription;
-        private RoutedEventHandler  mRoutedEventHandlerButtonClickJumpToExtra1;
-        private RoutedEventHandler  mRoutedEventHandlerButtonClickJumpToExtra2;
+        private RoutedEventHandler          mRoutedEventHandlerButtonClickUpdateItem;
+        private RoutedEventHandler          mRoutedEventHandlerButtonClickJumpToWholeItem;
+        private RoutedEventHandler          mRoutedEventHandlerButtonClickJumpToID;
+        private RoutedEventHandler          mRoutedEventHandlerButtonClickJumpToName;
+        private RoutedEventHandler          mRoutedEventHandlerButtonClickJumpToDescription;
+        private RoutedEventHandler          mRoutedEventHandlerButtonClickJumpToExtra1;
+        private RoutedEventHandler          mRoutedEventHandlerButtonClickJumpToExtra2;
 
-        private Semaphore           mStoredItemsToAddSemaphore = new Semaphore(1, 1);
-        private Semaphore           mFoundItemsToAddSemaphore  = new Semaphore(1, 1);
+        private Dispatcher                  mDispatcher;
 
-        private Dispatcher          mDispatcher;
+        private string                      mOpenFileText;
+        private byte[]                      mOpenFileData;
+        public  string                      OpenFileText { get => mOpenFileText; private set => mOpenFileText = value; }
 
-        private string              mOpenFileText;
-        private byte[]              mOpenFileData;
-        public  string              OpenFileText { get => mOpenFileText; private set => mOpenFileText = value; }
-        private string              mTranslatedFileText;
-        public  string              TranslatedFileText { get => mTranslatedFileText; set => mTranslatedFileText = value; }
 
-        public  FileItemProperties  FileItemProperties { get; private set; }
+        private string                      mTranslatedFileText;
+        public  string                      TranslatedFileText { get => mTranslatedFileText; set => mTranslatedFileText = value; }
 
-        public  FileName            LoadedFileName { get; private set; } = FileName.NULL;
+        public  FileItemProperties          FileItemProperties { get; private set; }
 
-        private Database            mDatabase;
+        public  FileType                    LoadedFileName { get; private set; } = FileType.NULL;
 
-        enum DataCollectionStates
+        //private Database                    mDatabase;
+
+        public  bool                        IsFileOpenToTranslateRunning            { get; private set; } = false;
+        private bool                        IsFoundItemDataCollectionCompleted      { get; set;         } = false;
+        private bool                        IsStoredItemDataToItemsProcessRunning   { get; set;         } = false;
+
+        private Label                       mLabelReportInfo;
+
+        // <summary>
+        // Provides utility methods for suspending and resuming the UI update of a ListBox in WPF.
+        // </summary>
+        public static class ListBoxUpdateSuspender
         {
-            FIND_NAME_LENGTH,
-            FIND_NAME_AND_ID,
-            FIND_DESCRIPTION_LENGTH,
-            FIND_DESCRIPTION,
-            FIND_EXTRA1_LENGTH,
-            FIND_EXTRA1,
-            FIND_EXTRA2_LENGTH,
-            FIND_EXTRA2
+            // <summary>
+            // Suspends the UI update of a ListBox.
+            //
+            // Parameters:
+            // - listBox: The ListBox control whose UI update needs to be suspended.
+            // </summary>
+            public static void SuspendUpdate(ListBox listBox)
+            {
+                // Get the handle of the ListBox control.
+                IntPtr handle = ((HwndSource)PresentationSource.FromVisual(listBox)).Handle;
+
+                // Suspend the UI update of the ListBox.
+                SendMessage(handle, WM_SETREDRAW, IntPtr.Zero, IntPtr.Zero);
+            }
+
+            // <summary>
+            // Resumes the UI update of a ListBox.
+            //
+            // Parameters:
+            // - listBox: The ListBox control whose UI update needs to be resumed.
+            // </summary>
+            public static void ResumeUpdate(ListBox listBox)
+            {
+                // Get the handle of the ListBox control.
+                IntPtr handle = ((HwndSource)PresentationSource.FromVisual(listBox)).Handle;
+
+                // Resume the UI update of the ListBox.
+                SendMessage(handle, WM_SETREDRAW, new IntPtr(1), IntPtr.Zero);
+
+                // Refresh the ListBox to update its UI.
+                listBox.InvalidateVisual();
+            }
+
+            // <summary>
+            // Sends a message to a window or control.
+            //
+            // Parameters:
+            // - hWnd: The handle to the window or control.
+            // - msg: The message to send.
+            // - wParam: Additional message-specific information.
+            // - lParam: Additional message-specific information.
+            //
+            // Returns:
+            // - The result of the message processing; it depends on the message sent.
+            // </summary>
+            [DllImport("user32.dll")]
+            private static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
+
+            private const int WM_SETREDRAW = 0x000B;
         }
 
         // Save File Dialog
         //private static SaveFileDialog mSaveFileDialog = new SaveFileDialog();
 
-        public FileManager(Dispatcher mainWindowDispatcher, ref ScintillaWPF scintillaWPFTextBox,
+        public FileManager(Dispatcher mainWindowDispatcher, ref ScintillaWPF scintillaWPFTextBox, ref Label labelReportInto,
             ref ListBox listBoxFoundItems, ref ListBox listBoxStoredItems,
             RoutedEventHandler routedEventHandlerButtonClickUpdateItem, RoutedEventHandler routedEventHandlerButtonClickJumpToWholeItem,
             RoutedEventHandler routedEventHandlerButtonClickJumpToID, RoutedEventHandler routedEventHandlerButtonClickJumpToName,
             RoutedEventHandler routedEventHandlerButtonClickJumpToDescription,
             RoutedEventHandler routedEventHandlerButtonClickJumpToExtra1, RoutedEventHandler routedEventHandlerButtonClickJumpToExtra2)
         {
-            mDispatcher             = mainWindowDispatcher;
-            mScintillaWPFTextBox    = scintillaWPFTextBox;
-            mListBoxFoundItems      = listBoxFoundItems;
-            mListBoxStoredItems     = listBoxStoredItems;
+            mDispatcher                                     = mainWindowDispatcher;
+            mScintillaWPFTextBox                            = scintillaWPFTextBox;
+            mLabelReportInfo                                = labelReportInto;
+            mListBoxFoundItems                              = listBoxFoundItems;
+            mListBoxStoredItems                             = listBoxStoredItems;
             mRoutedEventHandlerButtonClickUpdateItem        = routedEventHandlerButtonClickUpdateItem;
             mRoutedEventHandlerButtonClickJumpToWholeItem   = routedEventHandlerButtonClickJumpToWholeItem;
             mRoutedEventHandlerButtonClickJumpToID          = routedEventHandlerButtonClickJumpToID;
@@ -163,55 +217,133 @@ namespace WLO_Translator_WPF
             mRoutedEventHandlerButtonClickJumpToExtra1      = routedEventHandlerButtonClickJumpToExtra1;
             mRoutedEventHandlerButtonClickJumpToExtra2      = routedEventHandlerButtonClickJumpToExtra2;
 
-            //mDatabase = new Database("DatabaseProgramSettings", ".\\IO", // Server name
-            //    "SQLTestDatabase",
+            string dataDictionary = Path.GetFullPath(Path.Combine(Paths.SourceFolder, @"..\..\"));
+#if !DEBUG
+            //path = Paths.SourceFolder;
+#endif
+            //mDatabase = new Database("(LocalDB)\\MSSQLLocalDB",
+            //    dataDictionary/*"|DataDirectory|"*/ + "IO\\DatabaseProgramSettings.mdf",
+            //    "DatabaseProgramSettings", // Server name
             //    "sa", //DESKTOP-9ANKOSD\\ChriW
             //    "svmp@9108",
             //    true);
 
             //mDatabase.Connect();
 
+
             Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
         }
 
-        public void SaveAssociatedStoredItemData(string filePath, ref ListBox listBoxStoredItems, ref Label labelSaved)
+        public void SaveProgramSettings()
         {
-            //bool save = false, saveAs = false;
+            if (!File.Exists(Paths.ProgramSettingsPath))
+            {
+                if (!Directory.Exists(Paths.RoamingFolder))
+                    Paths.GenerateRoamingFolders();
+                FileStream fileStream = File.Create(Paths.ProgramSettingsPath);
+                fileStream.Close();
+            }
 
-            //try { if (((Button)sender).Content.ToString() == "Save As...") { saveAs = true; } }
-            //catch
-            //{
-            //    try { if (((MenuItem)sender).Header.ToString() == "Save As...") { saveAs = true; } }
-            //    catch
-            //    {
-            //        try { if (((MainWindow)sender) != null) { saveAs = false; } }
-            //        catch { throw new System.ArgumentException("Not Button, ToolStripMenuItem or ToolBarButton"); } // Neither Button, MenuItem nor FormMain
-            //    }
-            //}
+            XmlWriterSettings settings  = new XmlWriterSettings();
+            settings.Indent             = true;
+            settings.IndentChars        = "\t";
+            XmlWriter writer            = XmlWriter.Create(Paths.ProgramSettingsPath, settings);
 
-            //if (mSaveFilePath == "" || saveAs)
-            //{
-            //    if (mSaveFileDialog.ShowDialog() == true)
-            //    {
-            //        mSaveFilePath = mSaveFileDialog.FileName;
-            //        save = true;
-            //    }
-            //}
-            //else
-            //    save = true;
+            try
+            {
+                writer.WriteStartElement("ProgramSettings");
 
-            //if (save)
-            //{
-            string saveFilePath = Paths.AssociatedStoredItemData + Path.GetFileNameWithoutExtension(filePath);
-            string saveFilePathWithExtension = saveFilePath + mFileEnding;
+                    writer.WriteStartElement("SelectedTheme");
+
+                        writer.WriteAttributeString("Index", ThemeManager.ThemeIndex.ToString());
+
+                    writer.WriteEndElement();
+
+                    writer.WriteStartElement("MultiTranslator");
+
+                        writer.WriteAttributeString("MultiTranslatorItemDataPath",      Settings.MultiTranslatorItemDataPath);
+                        writer.WriteAttributeString("MultiTranslatorMarkDataPath",      Settings.MultiTranslatorMarkDataPath);
+                        writer.WriteAttributeString("MultiTranslatorNpcDataPath",       Settings.MultiTranslatorNpcDataPath);
+                        writer.WriteAttributeString("MultiTranslatorSceneDataDataPath", Settings.MultiTranslatorSceneDataDataPath);
+                        writer.WriteAttributeString("MultiTranslatorSkillDataPath",     Settings.MultiTranslatorSkillDataPath);
+                        writer.WriteAttributeString("MultiTranslatorTalkDataPath",      Settings.MultiTranslatorTalkDataPath);
+
+                    writer.WriteEndElement();
+
+                writer.WriteEndElement();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Exception: " + e.Message);
+            }
+
+            writer.Close();
+        }
+
+        public void LoadProgramSettings()
+        {
+            // Load program settings, if file exists
+            if (File.Exists(Paths.ProgramSettingsPath))
+            {
+                mStoredItemsToAdd = new List<ItemData>();
+                XmlReader reader = XmlReader.Create(Paths.ProgramSettingsPath);
+
+                try
+                {
+                    while (reader.Read())
+                    {
+                        if (reader.Name == "SelectedTheme")
+                        {
+                            if (reader.GetAttribute("Index") != null)
+                                ThemeManager.ApplyTheme(int.Parse(reader.GetAttribute("Index")));
+                        }
+
+                        if (reader.Name == "MultiTranslator")
+                        {
+                            if (reader.GetAttribute("MultiTranslatorItemDataPath") != null)
+                                Settings.MultiTranslatorItemDataPath        = reader.GetAttribute("MultiTranslatorItemDataPath");
+                            if (reader.GetAttribute("MultiTranslatorMarkDataPath") != null)
+                                Settings.MultiTranslatorMarkDataPath        = reader.GetAttribute("MultiTranslatorMarkDataPath");
+                            if (reader.GetAttribute("MultiTranslatorNpcDataPath") != null)
+                                Settings.MultiTranslatorNpcDataPath         = reader.GetAttribute("MultiTranslatorNpcDataPath");
+                            if (reader.GetAttribute("MultiTranslatorSceneDataDataPath") != null)
+                                Settings.MultiTranslatorSceneDataDataPath   = reader.GetAttribute("MultiTranslatorSceneDataDataPath");
+                            if (reader.GetAttribute("MultiTranslatorSkillDataPath") != null)
+                                Settings.MultiTranslatorSkillDataPath       = reader.GetAttribute("MultiTranslatorSkillDataPath");
+                            if (reader.GetAttribute("MultiTranslatorTalkDataPath") != null)
+                                Settings.MultiTranslatorTalkDataPath        = reader.GetAttribute("MultiTranslatorTalkDataPath");
+                        }
+                    }
+
+                    reader.Close();
+                }
+                catch (Exception e)
+                {
+                    MessageBox.Show("Exception: " + e.Message);
+                    Console.WriteLine("Exception: " + e.Message);
+                    reader.Close();
+                }
+            }
+            else
+                Console.WriteLine("Error: " + "The file \"" + Paths.ProgramSettingsPath + "\" couldn't be opened");
+        }
+
+        /// <summary>
+        /// Saves the associated stored item data
+        /// </summary>
+        /// <param name="filePath"></param>
+        /// <param name="storedItems"></param>
+        /// <param name="labelSaved"></param>
+        public void SaveStoredItemData(FileType fileName, List<IItemBase> storedItems)
+        {
+            string saveFilePath = Paths.AssociatedStoredItemData + TextManager.GetFileTypeToString(fileName);
+            string saveFilePathWithExtension = saveFilePath + Constants.FILE_ENDING_STORED_ITEM_DATA;
             if (!File.Exists(saveFilePathWithExtension))
             {
                 if (!Directory.Exists(Paths.AssociatedStoredItemData))
                     Paths.GenerateRoamingFolders();
                 FileStream fileStream = File.Create(saveFilePathWithExtension);
                 fileStream.Close();
-                //labelSaved.Content = "File " + Path.GetFileNameWithoutExtension(filePath) + "Couldn't Be Saved";
-                //return;
             }
 
             XmlWriterSettings settings  = new XmlWriterSettings();
@@ -225,18 +357,13 @@ namespace WLO_Translator_WPF
 
                     writer.WriteStartElement("Items");
 
-                        writer.WriteAttributeString("ItemCount", listBoxStoredItems.Items.Count.ToString());
+                        writer.WriteAttributeString("ItemCount", storedItems.Count.ToString());
 
-                        for (int i = 0; i < listBoxStoredItems.Items.Count; i++)
+                        for (int i = 0; i < storedItems.Count; i++)
                         {
-                            Item currentItem = listBoxStoredItems.Items[i] as Item;
+                            IItemBase currentItem = storedItems[i];
 
                             writer.WriteStartElement("Item");
-
-                                //string idString                 = currentItem.ID[0].ToString() + currentItem.ID[1].ToString();
-
-                                //string filePathItemName         = saveFilePath + "." + idString + ".wtn";
-                                //string filePathItemDescription  = saveFilePath + "." + idString + ".wtd";
 
                                 // Ints and strings
                                 writer.WriteAttributeString("ID1",                      currentItem.ID[0].ToString());
@@ -276,38 +403,49 @@ namespace WLO_Translator_WPF
 
             writer.Close();
 
-            labelSaved.Content = Path.GetFileNameWithoutExtension(filePath) + " Stored Items " + " Saved";
-            //}
-        }        
-
-        private void LoadAssociatedStoredItemData(string fileName)
+            mLabelReportInfo.Content = TextManager.GetFileTypeToString(fileName) + " Stored Items " + " Saved";
+        }
+        /// <summary>
+        /// Loads the associated stored item data
+        /// </summary>
+        /// <param name="fileName"></param>
+        /// <param name="isMultiTranslator"></param>
+        private void LoadStoredItemData(string fileName, bool isMultiTranslator)
         {
-            string savefilePath = Paths.AssociatedStoredItemData + Path.GetFileNameWithoutExtension(fileName) + mFileEnding;
+            string savefilePath = Paths.AssociatedStoredItemData + Path.GetFileNameWithoutExtension(fileName)
+                + Constants.FILE_ENDING_STORED_ITEM_DATA;
 
             // Load last saved data, if file exists
             if (File.Exists(savefilePath))
             {
                 mStoredItemsToAdd = new List<ItemData>();
+                List<ItemData> storedItemsToAdd = new List<ItemData>();
                 XmlReader reader = XmlReader.Create(savefilePath);
 
                 try
                 {
-                    //List<ItemData> items = new List<ItemData>();
-                    int report = 0, progressValue = 0, loadingBarMaximum = 0;
+                    DateTime lastReportedTime = DateTime.Now;
 
                     while (reader.Read())
                     {
                         if (reader.Name == "Items")
                         {
                             if (reader.GetAttribute("ItemCount") != null)
-                                mDispatcher.Invoke(() => { mWindowLoadingBar.Maximum = loadingBarMaximum = int.Parse(reader.GetAttribute("ItemCount")); });
+                            {
+                                double maximumStoredItems = double.Parse(reader.GetAttribute("ItemCount"));// });
+
+                                if (!IsStoredItemDataToItemsProcessRunning && IsFileOpenToTranslateRunning)
+                                {
+                                    mDispatcher.Invoke(() => LoadingBarManager.ShowOrInitializeLoadingBar("Stored", 0d,
+                                        FileItemProperties, maximumStoredItems));
+                                    LoadingBarManager.WaitUntilValueHasChanged();
+                                    IsStoredItemDataToItemsProcessRunning = true;
+                                }
+                            }
                         }
                         else if (reader.Name == "Item")
                         {                            
                             ItemData currentItemData = new ItemData();
-
-                            //currentItem = new Item(mRoutedEventHandlerButtonClickJumpToWholeItem, mRoutedEventHandlerButtonClickJumpToID,
-                            //    mRoutedEventHandlerButtonClickJumpToName, mRoutedEventHandlerButtonClickJumpToDescription);
 
                             if (reader.GetAttribute("ID3") != null && reader.GetAttribute("ID2") != null && reader.GetAttribute("ID1") != null)
                                 currentItemData.ID = new int[] { int.Parse(reader.GetAttribute("ID1")), int.Parse(reader.GetAttribute("ID2")),
@@ -364,161 +502,96 @@ namespace WLO_Translator_WPF
                             if (reader.GetAttribute("Extra2EndPosition") != null)
                                 currentItemData.Extra2EndPosition = int.Parse(reader.GetAttribute("Extra2EndPosition"));
 
-                            mStoredItemsToAddSemaphore.WaitOne();
-                                mStoredItemsToAdd.Add(currentItemData);
-                            mStoredItemsToAddSemaphore.Release();
+                            storedItemsToAdd.Add(currentItemData);
 
-                            ++report;
-                            ++progressValue;
-                            if (report > 100)
+                            if (lastReportedTime.AddSeconds(0.01) < DateTime.Now)
                             {
-                                // Report progress to progress bar
-                                mBackgroundWorkerStoredItemData.ReportProgress(progressValue);
-                                //Thread.Sleep(Constants.LOADING_SLEEP_LENGTH);
-                                report = 0;
+                                ReportProgress(ref storedItemsToAdd, storedItemsToAdd.Count, isMultiTranslator, true);
+                                lastReportedTime = DateTime.Now;
                             }
                         }
                     }
 
-                    mBackgroundWorkerStoredItemData.ReportProgress(loadingBarMaximum);
+                    ReportProgress(ref storedItemsToAdd, storedItemsToAdd.Count, isMultiTranslator, true);
 
                     reader.Close();
-
-                    //return items;
                 }
                 catch (Exception e)
                 {
-                    MessageBox.Show("Exception: " + e.Message/*"File \"" + mOpenFileDialog.FileName + "\" couldn't be loaded"*/);
+                    MessageBox.Show("Exception: " + e.Message);
                     Console.WriteLine("Exception: " + e.Message);
                     reader.Close();
+
+                    ReportProgress(ref storedItemsToAdd, storedItemsToAdd.Count, isMultiTranslator, true);
                 }
             }
             else
-                System.Console.WriteLine("Error: " + "The file \"" + savefilePath + "\" couldn't be opened");
+                Console.WriteLine("Error: " + "The file \"" + savefilePath + "\" couldn't be opened");
         }
 
-        public void LoadItemData(string filePath)
-        {
-            string lodingBarTitle = "Loading Data", loadingBarText = "Loading Stored Item Data", loadingBarTextBeforeValue = "Loaded";
-
-            if (mBackgroundWorkerStoredItemData != null)
-            {
-                mBackgroundWorkerStoredItemData.Dispose();
-                mBackgroundWorkerStoredItemData = null;
-            }
-
-            if (mWindowLoadingBar == null)
-            {
-                mWindowLoadingBar = new WindowLoadingBar(lodingBarTitle, loadingBarText, loadingBarTextBeforeValue, 0);
-                mWindowLoadingBar.WindowStartupLocation = WindowStartupLocation.CenterOwner;
-                mWindowLoadingBar.Owner = Application.Current.MainWindow;
-            }
-            else
-            {
-                mWindowLoadingBar.SetTitle(lodingBarTitle);
-                mWindowLoadingBar.SetText(loadingBarText);
-                mWindowLoadingBar.Value = 0;
-            }
-
-            mBackgroundWorkerStoredItemData = new BackgroundWorker();
-            mBackgroundWorkerStoredItemData.WorkerReportsProgress = true;
-            mBackgroundWorkerStoredItemData.DoWork              += BackgroundWorkerStoredItemData_DoWork;
-            mBackgroundWorkerStoredItemData.ProgressChanged     += BackgroundWorkerStoredItemData_ProgressChanged;
-            mBackgroundWorkerStoredItemData.RunWorkerCompleted  += BackgroundWorkerStoredItemData_RunWorkerCompleted;
-            mBackgroundWorkerStoredItemData.RunWorkerAsync(filePath);
-
-            if (!mWindowLoadingBar.IsEnabled)
-                _ = Task.Run(() => { Application.Current.Dispatcher.Invoke(() => { mWindowLoadingBar.ShowDialog(); }); });
-            //mWindowLoadingBar.ShowDialog();
-        }
-
-        private void BackgroundWorkerStoredItemData_DoWork(object sender, DoWorkEventArgs e)
-        {
-            LoadAssociatedStoredItemData(e.Argument as string);
-        }
-
-        private void BackgroundWorkerStoredItemData_ProgressChanged(object sender, ProgressChangedEventArgs e)
-        {
-            // Get the contents of the mStoredItemsToAdd list as an atomic operation
-            mStoredItemsToAddSemaphore.WaitOne();
-                ItemData[] storedItemsToAdd = new ItemData[mStoredItemsToAdd.Count];
-                mStoredItemsToAdd.CopyTo(storedItemsToAdd);
-                mStoredItemsToAdd.Clear();
-            mStoredItemsToAddSemaphore.Release();
-
-            foreach (ItemData item in storedItemsToAdd)
-            {
-                //mListBox.ItemsSource.GetEnumerator().MoveNext();
-                mListBoxStoredItems.Items.Add(item.ToItem(mRoutedEventHandlerButtonClickUpdateItem,
-                        mRoutedEventHandlerButtonClickJumpToWholeItem,
-                        mRoutedEventHandlerButtonClickJumpToID,
-                        mRoutedEventHandlerButtonClickJumpToName,
-                        mRoutedEventHandlerButtonClickJumpToDescription,
-                        mRoutedEventHandlerButtonClickJumpToExtra1,
-                        mRoutedEventHandlerButtonClickJumpToExtra2,
-                        FileItemProperties.HasDescription,
-                        FileItemProperties.HasExtras
-                        ));
-            }
-
-            mWindowLoadingBar.Value = e.ProgressPercentage;
-        }
-
-        private void BackgroundWorkerStoredItemData_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
-        {
-            ((MainWindow)Application.Current.MainWindow).InitializeItemSearch();
-
-            // Close loading bar
-            if (mWindowLoadingBar != null && mWindowLoadingBar.IsActive)
-                mWindowLoadingBar.Close();
-        }        
-
+        #region Background worker found item data
         private void BackgroundWorkerFoundItemData_DoWork(object sender, DoWorkEventArgs e)
         {
-            string fileName = e.Argument as string;
+            Thread.Sleep(250);
+
+            object[] arguments = e.Argument as object[];
+            string fileName = arguments[0] as string;
+            bool isMultiTranslator = (bool)arguments[1];
+
+            CollectFoundItemDataAsync(fileName, isMultiTranslator).Wait();
+
+            e.Result = new object[] { fileName, isMultiTranslator };
+        }
+
+        private class ItemDataPart
+        {
+            public int StartIndex   { get; private set; }
+            public int EndIndex     { get; private set; }
+
+            public ItemDataPart(int startIndex, int endIndex)
+            {
+                StartIndex  = startIndex;
+                EndIndex    = endIndex;
+            }
+        }
+
+        public async Task CollectFoundItemDataAsync(string fileName, bool isMultiTranslator)
+        {
+            Thread.Sleep(50);
 
             // Load Data
-            FileStream fileStream   = File.OpenRead(fileName);
-            byte[] bytes            = new byte[fileStream.Length];
-            int readBytesAmount     = fileStream.Read(bytes, 0, (int)fileStream.Length);
+            FileStream fileStream = File.OpenRead(fileName);
+            byte[] bytes = new byte[fileStream.Length];
+            int readBytesAmount = fileStream.Read(bytes, 0, (int)fileStream.Length);
 
-            //string byteString = Encoding.GetEncoding(1252).GetString(bytes);
-
-            int itemStartPosition = -1, itemNameStartPosition = -1, itemNameLength = -1,
-                itemDescriptionStartPosition = -1, itemDescriptionLength = -1,
-                itemExtra1LengthPosition = -1, itemExtra1StartPosition = -1, itemExtra1Length = -1,
-                itemExtra2StartPosition = -1, itemExtra2Length = -1/*, zeroCounter = 0, stopAtItem = 1*/;
-            DataCollectionStates dataCollectionState = DataCollectionStates.FIND_NAME_LENGTH;
-            ItemData currentItem = null;
-
-            //List<ItemData> items = new List<ItemData>();
             mFoundItemsToAdd = new List<ItemData>();
+            List<ItemData> foundItemsToAdd = new List<ItemData>();
 
             mDispatcher.Invoke(() =>
             {
-                mWindowLoadingBar.Maximum = bytes.Length;
-                mBackgroundWorkerFoundItemData.ReportProgress(0);
-
+                LoadingBarManager.ShowOrInitializeLoadingBar("Found", 0d, FileItemProperties, bytes.Length);
                 mOpenFileData = bytes;
-                //Thread.Sleep(Constants.LOADING_SLEEP_LENGTH);
             });
 
-            int report = 0, startOffset = 0, idOffset = 0;
+            LoadingBarManager.WaitUntilValueHasChanged();
 
-            switch (FileItemProperties.FileName)
+            int startOffset = 0, idOffset = 0;
+            DateTime lastReportedTime = DateTime.Now;
+
+            switch (FileItemProperties.FileType)
             {
-                case FileName.ACTIONINFO:
+                case FileType.ACTIONINFO:
                     startOffset = FileItemProperties.LengthPerItem + Constants.ACTIONINFO_DATA_INITIAL_OFFSET;
                     idOffset    = Constants.ACTIONINFO_DATA_ID_OFFSET;
                     break;
-                case FileName.ALOGINEXE:
+                case FileType.ALOGINEXE:
                     startOffset = 0;
                     break;
-                case FileName.SCENEDATA:
+                case FileType.SCENEDATA:
                     startOffset = FileItemProperties.LengthPerItem + Constants.SCENEDATA_DATA_INITIAL_OFFSET;
                     idOffset    = Constants.SCENEDATA_DATA_ID_OFFSET;
                     break;
-                case FileName.TALK:
+                case FileType.TALK:
                     startOffset = FileItemProperties.LengthPerItem + Constants.TALK_DATA_INITIAL_OFFSET;
                     idOffset    = Constants.TALK_DATA_ID_OFFSET;
                     break;
@@ -527,278 +600,186 @@ namespace WLO_Translator_WPF
                     break;
             }
 
-            // Find the rest of the items' info
-            for (int i = startOffset; i < bytes.Length; ++i)
-            {                
-                byte currentByte = bytes[i];
+            List<Task<List<ItemData>>> itemDataTasks = new List<Task<List<ItemData>>>();
 
-                // Find start of item
-                if (currentByte != '\0')
-                {
-                    //zeroCounter = 0;
+            int lengthPerItem = FileItemProperties.LengthPerItem;
+            if (FileItemProperties.FileType == FileType.MARK)
+                lengthPerItem *= 2;
+            //int dataPerTask = lengthPerItem * 10;
 
-                    if (dataCollectionState == DataCollectionStates.FIND_NAME_LENGTH)
-                    {
-                        itemStartPosition               = i;
-                        dataCollectionState             = DataCollectionStates.FIND_NAME_AND_ID;
-                        currentItem                     = new ItemData();
-                        currentItem.ItemStartPosition   = itemStartPosition;
-                    }
-                    else if (dataCollectionState == DataCollectionStates.FIND_NAME_AND_ID)
-                    {
-                        itemNameStartPosition = i;
-                        itemNameLength = bytes[itemStartPosition];
-
-                        // Break if outside boundaries
-                        if (itemNameStartPosition + itemNameLength >= bytes.Length)
-                        {
-                            mBackgroundWorkerFoundItemData.ReportProgress(bytes.Length);
-                            break;
-                        }
-
-                        StoreDataIntoItem(ref currentItem, ref bytes, itemNameStartPosition, itemNameLength, dataCollectionState,
-                            FileItemProperties.DataFromRightToLeft);
-                        StoreIDDataIntoItem(ref currentItem, ref bytes, idOffset);
-
-                        // Decide if description should be found of not
-                        if (FileItemProperties.AfterNameToDescriptionLength > 0)
-                        {
-                            dataCollectionState = DataCollectionStates.FIND_DESCRIPTION_LENGTH;
-                            i += itemNameLength;
-                        }
-                        else
-                        {
-                            dataCollectionState = DataCollectionStates.FIND_NAME_LENGTH;
-                            i = currentItem.ItemStartPosition + FileItemProperties.LengthPerItem - 1;
-
-                            if (i < bytes.Length)
-                                currentItem.ItemEndPosition = i;
-                            else
-                                currentItem.ItemEndPosition = bytes.Length - 1;
-
-                            AddItemDataToListThatAddsThemToFoundItemsListBox(ref currentItem);
-                        }
-                    }
-                    else if (dataCollectionState == DataCollectionStates.FIND_DESCRIPTION_LENGTH)
-                    {
-                        i += FileItemProperties.AfterNameToDescriptionLength - 1;
-                        itemDescriptionLength = bytes[i];
-
-                        // If the description length becomes 0, decrease i by 1 and get the new description length from that position
-                        while (itemDescriptionLength == 0 && i > currentItem.IDEndPosition)
-                        {
-                            --i;
-                            itemDescriptionLength = bytes[i];
-
-                            Console.WriteLine("WARNING: Item \"" + currentItem.Name + "\"'s description length was 0 and is now of length "
-                                + itemDescriptionLength.ToString());
-                        }
-
-                        currentItem.DescriptionLengthPosition = i;
-                        dataCollectionState = DataCollectionStates.FIND_DESCRIPTION;
-                    }
-                    else if (dataCollectionState == DataCollectionStates.FIND_DESCRIPTION)
-                    {
-                        itemDescriptionStartPosition = i;
-
-                        // Break if outside boundaries
-                        if (itemDescriptionStartPosition + itemDescriptionLength >= bytes.Length)
-                        {
-                            mBackgroundWorkerFoundItemData.ReportProgress(bytes.Length);
-                            break;
-                        }
-
-                        StoreDataIntoItem(ref currentItem, ref bytes, itemDescriptionStartPosition, itemDescriptionLength, dataCollectionState,
-                            FileItemProperties.DataFromRightToLeft);
-
-                        i = currentItem.ItemStartPosition + FileItemProperties.LengthPerItem - 1;
-
-                        if (FileItemProperties.FileName != FileName.MARK)
-                        {
-                            dataCollectionState = DataCollectionStates.FIND_NAME_LENGTH;
-                            currentItem.ItemEndPosition = i;
-                            AddItemDataToListThatAddsThemToFoundItemsListBox(ref currentItem);
-                        }
-                        else
-                            dataCollectionState = DataCollectionStates.FIND_EXTRA1_LENGTH;
-                    }
-                    else if (dataCollectionState == DataCollectionStates.FIND_EXTRA1_LENGTH)
-                    {
-                        itemExtra1LengthPosition = i;
-                        dataCollectionState = DataCollectionStates.FIND_EXTRA1;
-                    }
-                    else if (dataCollectionState == DataCollectionStates.FIND_EXTRA1)
-                    {
-                        itemExtra1StartPosition = i;
-                        itemExtra1Length = bytes[itemExtra1LengthPosition];
-
-                        // Break if outside boundaries
-                        if (itemExtra1StartPosition + itemExtra1Length >= bytes.Length)
-                        {
-                            mBackgroundWorkerFoundItemData.ReportProgress(bytes.Length);
-                            break;
-                        }
-
-                        StoreDataIntoItem(ref currentItem, ref bytes, itemExtra1StartPosition, itemExtra1Length, DataCollectionStates.FIND_EXTRA1,
-                            FileItemProperties.DataFromRightToLeft);
-                        currentItem.Extra1LengthPosition = itemExtra1LengthPosition;
-
-                        i += itemExtra1Length;
-                        dataCollectionState = DataCollectionStates.FIND_EXTRA2_LENGTH;
-                    }
-                    else if (dataCollectionState == DataCollectionStates.FIND_EXTRA2_LENGTH)
-                    {
-                        i += FileItemProperties.AfterNameToDescriptionLength - 1;
-                        itemExtra2Length = bytes[i];
-
-                        // If the description length becomes 0, decrease i by 1 and get the new description length from that position
-                        while (itemExtra2Length == 0 && i > currentItem.DescriptionEndPosition)
-                        {
-                            --i;
-                            itemExtra2Length = bytes[i];
-
-                            Console.WriteLine("WARNING: Item \"" + currentItem.Name + "\"'s extra 2 length was 0 and is now of length "
-                                + itemDescriptionLength.ToString());
-                        }
-
-                        currentItem.Extra2LengthPosition = i;
-                        dataCollectionState = DataCollectionStates.FIND_EXTRA2;
-                    }
-                    else if (dataCollectionState == DataCollectionStates.FIND_EXTRA2)
-                    {
-                        itemExtra2StartPosition = i;
-
-                        // Break if outside boundaries
-                        if (itemExtra2StartPosition + itemExtra2Length >= bytes.Length)
-                        {
-                            mBackgroundWorkerFoundItemData.ReportProgress(bytes.Length);
-                            break;
-                        }
-
-                        StoreDataIntoItem(ref currentItem, ref bytes, itemExtra2StartPosition, itemExtra2Length, dataCollectionState,
-                            FileItemProperties.DataFromRightToLeft);
-
-                        i = currentItem.ItemStartPosition + FileItemProperties.LengthPerItem * 2 - 1;
-
-                        dataCollectionState = DataCollectionStates.FIND_NAME_LENGTH;
-                        currentItem.ItemEndPosition = i;
-                        AddItemDataToListThatAddsThemToFoundItemsListBox(ref currentItem);
-                    }
-                }
-
-                ++report;
-                if (report > Constants.LOADING_DATA_PER_REPORT)
-                {
-                    mBackgroundWorkerFoundItemData.ReportProgress(i);
-                    //Thread.Sleep(Constants.LOADING_SLEEP_LENGTH);
-                    report = 0;
-                }
-            }
-
-            mBackgroundWorkerFoundItemData.ReportProgress(bytes.Length);
-
-            e.Result = fileName;
-        }
-
-        private void StoreDataIntoItem(ref ItemData item, ref byte[] bytes, int startPosition, int length,
-            DataCollectionStates dataCollectionState, bool dataFromRightToLeft)
-        {
-            // Get the item data
-            string data = "";
-            for (int j = startPosition; j < startPosition + length; ++j)
-                data += (char)bytes[j];
-
-            //// Remove chars from the name until no illegal chars or initial non-althabetical or numerical chars are left
-            //while (!TextManager.IsStringContainingOnlyQuestionMarks(data) && !(data == ")???(") &&
-            //    (TextManager.IsStringContainingIllegalChar(data) ||
-            //    TextManager.IsStringEndingWithNonNumberOrLetterOrParenthesesChar(data)))
-            //{
-            //    data = data.Remove(data.Length - 1);
-            //    --length;
-            //}
-
-            //// If the description doesn't end there it should, increase the description until it's fully retrieved
-            //while (!TextManager.IsStringContainingNonConventionalChar(((char)bytes[j]).ToString())/*(char)bytes[j] != '\u0090' && (char)bytes[j] != '\u0093' && (char)bytes[j] != '\u2013'*/)
-            //{
-            //    itemDescription += (char)bytes[j];
-            //    ++itemDescriptionLength;
-            //    ++j;
-            //}
-
-            // Clean the item data from bad chars
-            data = TextManager.CleanStringFromNewLinesAndBadChars(data);
-
-            switch (dataCollectionState)
-            {
-                case DataCollectionStates.FIND_NAME_AND_ID:
-                    if (dataFromRightToLeft)
-                        item.NameReversed           = data;
-                    else
-                        item.Name                   = data;
-                    item.NameStartPosition          = startPosition;
-                    item.NameEndPosition            = startPosition + length;
-                    break;
-                case DataCollectionStates.FIND_DESCRIPTION:
-                    if (dataFromRightToLeft)
-                        item.DescriptionReversed    = data;
-                    else
-                        item.Description            = data;
-                    item.DescriptionStartPosition   = startPosition;
-                    item.DescriptionEndPosition     = startPosition + length;
-                    break;
-                case DataCollectionStates.FIND_EXTRA1:
-                    if (dataFromRightToLeft)
-                        item.Extra1Reversed         = data;
-                    else
-                        item.Extra1                 = data;
-                    item.Extra1StartPosition        = startPosition;
-                    item.Extra1EndPosition          = startPosition + length;
-                    break;
-                case DataCollectionStates.FIND_EXTRA2:
-                    if (dataFromRightToLeft)
-                        item.Extra2Reversed         = data;
-                    else
-                        item.Extra2                 = data;
-                    item.Extra2StartPosition        = startPosition;
-                    item.Extra2EndPosition          = startPosition + length;
-                    break;
-            }
-        }
-
-        private void StoreIDDataIntoItem(ref ItemData item, ref byte[] bytes, int idOffset)
-        {
-            // Extract the item ID
-            int nameEndPositionWithOffset;
-            if (FileItemProperties.FileName == FileName.ACTIONINFO)
-                nameEndPositionWithOffset = item.ItemStartPosition  + idOffset;
+            // Calculate how many tasks and items per task that it should be
+            int taskAmount = 0, maxTasks = 1000;
+            if (bytes.Length < 10000)
+                taskAmount = 1;
+            else if (bytes.Length < 20000)
+                taskAmount = 2;
+            else if (bytes.Length / 20000 * 32 < maxTasks)
+                taskAmount = bytes.Length / 20000 * 32;
             else
-                nameEndPositionWithOffset = item.NameEndPosition    + idOffset;
+                taskAmount = maxTasks;
 
-            while (bytes.Length <= nameEndPositionWithOffset + 2)
-                nameEndPositionWithOffset--;
+            int dataPerTask = bytes.Length / taskAmount - bytes.Length / taskAmount % lengthPerItem;
 
-            item.ID = new int[]
+            // Find items' info and store them in ItemData objects
+            int i = startOffset;
+            Stack<List<ItemDataPart>> itemDataPartStack = new Stack<List<ItemDataPart>>();
+            for (; i < bytes.Length; i += dataPerTask)
             {
-                bytes[nameEndPositionWithOffset    ],
-                bytes[nameEndPositionWithOffset + 1],
-                bytes[nameEndPositionWithOffset + 2]
-            };
-            item.IDStartPosition = nameEndPositionWithOffset;
-            item.IDEndPosition   = nameEndPositionWithOffset + 2;
+                // If dataPerTask is too large for the last task(s), make the current task take the rest of the data
+                if (i + dataPerTask > bytes.Length)
+                    dataPerTask = bytes.Length - i;
+
+                List<ItemDataPart> itemDataParts = new List<ItemDataPart>();
+                for (int j = i; j < i + dataPerTask; j += lengthPerItem)
+                {
+                    itemDataParts.Add(new ItemDataPart(j, j + lengthPerItem));
+                }
+
+                itemDataPartStack.Push(itemDataParts);
+            }
+
+            while (itemDataPartStack.Count > 0)
+            {
+                List<ItemDataPart> itemDataParts = itemDataPartStack.Pop();
+                itemDataTasks.Add(Task.Run(() =>
+                {
+                    List<ItemData> itemData = new List<ItemData>();
+                    foreach (ItemDataPart itemDataPart in itemDataParts)
+                    {
+                        itemData.Add(new FoundItemDataCollection(ref bytes, FileItemProperties)
+                                .CollectData(itemDataPart.StartIndex, itemDataPart.EndIndex, idOffset));
+                    }
+                    return itemData;
+                }));
+
+                //if (lastReportedTime.AddSeconds(0.1) < DateTime.Now)
+                //{
+                //    ReportProgress(ref foundItemsToAdd, i, isMultiTranslator, false);
+                //    lastReportedTime = DateTime.Now;
+                //}
+            }
+
+            // Get result
+            List<ItemData> result;
+            itemDataTasks.Reverse();
+            int progress = 0;
+            int taskIndex = 0;
+            foreach (Task<List<ItemData>> task in itemDataTasks)
+            {
+                result = await task;
+                foreach (ItemData itemData in result)
+                {
+                    if (itemData != null)
+                    {
+                        foundItemsToAdd.Add(itemData);
+                        Console.WriteLine("Completed Collection of Found Item With Name: " + itemData.Name);
+                    }
+                    else
+                        Console.WriteLine("Uncompleted Collection of Item");
+                }
+                progress += dataPerTask;
+                if (progress >= bytes.Length / 5)
+                {
+                    ReportProgress(ref foundItemsToAdd, progress, isMultiTranslator, false);
+                    //lastReportedTime = DateTime.Now;
+                    progress = 0;
+                }
+                task.Dispose();
+                ++taskIndex;
+            }
+
+            ReportProgress(ref foundItemsToAdd, bytes.Length, isMultiTranslator, false);
         }
 
-        private void AddItemDataToListThatAddsThemToFoundItemsListBox(ref ItemData itemData)
+        private void BackgroundWorkerFoundItemData_ProgressChanged(object sender, ProgressChangedEventArgs e)
         {
-            mFoundItemsToAddSemaphore.WaitOne();
-                int itemEndPosition = -1;
-                if (mFoundItemsToAdd.Count > 0 && (itemEndPosition = mFoundItemsToAdd.Last().ItemEndPosition)
-                    >= itemData.ItemStartPosition)
-                    ;
-                mFoundItemsToAdd.Add(itemData);
-            mFoundItemsToAddSemaphore.Release();
+            object[] arguments = (object[])e.UserState;
+            List<ItemData> foundItemsToAdd = (List<ItemData>)arguments[0];
+            bool isMultiTranslator = (bool)arguments[1];
+
+            _ = StoreItemsInListBoxAsync(mItemSourceListBoxFoundItemsTemporary, foundItemsToAdd, e.ProgressPercentage, false,
+                isMultiTranslator);
         }
 
-        // The name length affects where the id of the item is located. This function gathers all data based on the data in the item already.
+        private void BackgroundWorkerFoundItemData_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
+        {
+            IsFoundItemDataCollectionCompleted = true;
+            object[] arguments = e.Result as object[];
+            StartBackgroundWorkerLoadStoredItemData(arguments[0] as string, (bool)arguments[1]);
+        }
+        #endregion
+
+        public void StartBackgroundWorkerLoadStoredItemData(string filePath, bool isMultiTranslator)
+        {
+            if (mBackgroundWorkerStoredItemData != null)
+            {
+                mBackgroundWorkerStoredItemData.Dispose();
+                mBackgroundWorkerStoredItemData = null;
+            }
+
+            //if (!isMultiTranslator)
+            //{
+            //    ListBoxUpdateSuspender.SuspendUpdate(mListBoxFoundItems);
+            //    ListBoxUpdateSuspender.SuspendUpdate(mListBoxStoredItems);
+            //}
+
+            mBackgroundWorkerStoredItemData = new BackgroundWorker();
+            mBackgroundWorkerStoredItemData.WorkerReportsProgress = true;
+            mBackgroundWorkerStoredItemData.DoWork              += BackgroundWorkerStoredItemData_DoWork;
+            mBackgroundWorkerStoredItemData.ProgressChanged     += BackgroundWorkerStoredItemData_ProgressChanged;
+            mBackgroundWorkerStoredItemData.RunWorkerCompleted  += BackgroundWorkerStoredItemData_RunWorkerCompleted;
+            mBackgroundWorkerStoredItemData.RunWorkerAsync(new object[] { filePath, isMultiTranslator });
+        }
+        
+        #region Background worker stored item data
+        private void BackgroundWorkerStoredItemData_DoWork(object sender, DoWorkEventArgs e)
+        {
+            object[] arguments = e.Argument as object[];
+
+            while (!IsFoundItemDataCollectionCompleted)
+                Thread.Sleep(Constants.LOADING_SLEEP_LENGTH);
+
+            LoadStoredItemData(arguments[0] as string, (bool)arguments[1]);
+
+            e.Result = arguments[1];
+        }
+
+        private void BackgroundWorkerStoredItemData_ProgressChanged(object sender, ProgressChangedEventArgs e)
+        {
+            object[]        arguments           = (object[])e.UserState;
+            List<ItemData>  storedItemsToAdd    = (List<ItemData>)arguments[0];
+            bool            isMultiTranslator   = (bool)arguments[1];
+
+            _ = StoreItemsInListBoxAsync(mItemSourceListBoxStoredItemsTemporary, storedItemsToAdd, e.ProgressPercentage, true,
+                isMultiTranslator);
+        }
+
+        private void BackgroundWorkerStoredItemData_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
+        {
+            bool isMultiTranslator = (bool)e.Result;
+            if (!isMultiTranslator)
+                ((MainWindow)Application.Current.MainWindow).InitializeItemSearch();
+        }
+        #endregion
+
+        private void ReportProgress(ref List<ItemData> itemData, int progress, bool isMultiTranslator, bool isStoredItems)
+        {
+            // Pick background worker
+            BackgroundWorker backgroundWorker = mBackgroundWorkerFoundItemData;
+            if (isStoredItems)
+                backgroundWorker = mBackgroundWorkerStoredItemData;
+
+            // Report progress, clear the list and sleep
+            backgroundWorker.ReportProgress(progress, new object[] { itemData.ToList(), isMultiTranslator });
+            itemData.Clear();
+            int sleepTime = 500;//Constants.LOADING_SLEEP_LENGTH * (isStoredItems ? 2 : 1);
+
+            while (!LoadingBarManager.IsValueChanged)
+                Thread.Sleep(sleepTime);
+        }
+
+        // The name length affects where the id of the item is located.
+        // This function gathers all data based on the data in the item already.
         public void UpdateItemInfoBasedOnNewNameLength(Item item)
         {
             // Update name end position
@@ -832,21 +813,21 @@ namespace WLO_Translator_WPF
         public void UpdateItemID(ref Item item)
         {
             int offset = 0;
-            switch (FileItemProperties.FileName)
+            switch (FileItemProperties.FileType)
             {
-                case FileName.ACTIONINFO:
+                case FileType.ACTIONINFO:
                     offset = Constants.ACTIONINFO_DATA_ID_OFFSET;
                     break;
-                case FileName.SCENEDATA:
+                case FileType.SCENEDATA:
                     offset = Constants.SCENEDATA_DATA_ID_OFFSET;
                     break;
-                case FileName.TALK:
+                case FileType.TALK:
                     offset = Constants.TALK_DATA_ID_OFFSET;
                     break;
             }
 
             int nameEndPositionWithOffset;
-            if (FileItemProperties.FileName == FileName.ACTIONINFO)
+            if (FileItemProperties.FileType == FileType.ACTIONINFO)
                 nameEndPositionWithOffset = item.ItemStartPosition + offset;
             else
                 nameEndPositionWithOffset = item.NameEndPosition + offset;
@@ -865,8 +846,12 @@ namespace WLO_Translator_WPF
             item.IDEndPosition      = nameEndPositionWithOffset + 2;
         }
 
-        public bool OpenFileToTranslate(string filePath)
+        public bool OpenFileToTranslate(string filePath, bool isMultiTranslator = false)
         {
+            IsFileOpenToTranslateRunning            = true;
+            IsFoundItemDataCollectionCompleted      = false;
+            IsStoredItemDataToItemsProcessRunning   = false;
+
             if (mBackgroundWorkerFoundItemData != null)
             {
                 mBackgroundWorkerFoundItemData.Dispose();
@@ -877,28 +862,28 @@ namespace WLO_Translator_WPF
             switch (fileName)
             {
                 case "actioninfo":
-                    LoadedFileName = FileName.ACTIONINFO;
+                    LoadedFileName = FileType.ACTIONINFO;
                     break;
                 case "alogin":
-                    LoadedFileName = FileName.ALOGINEXE;
+                    LoadedFileName = FileType.ALOGINEXE;
                     break;
                 case "item":
-                    LoadedFileName = FileName.ITEM;
+                    LoadedFileName = FileType.ITEM;
                     break;
                 case "mark":
-                    LoadedFileName = FileName.MARK;
+                    LoadedFileName = FileType.MARK;
                     break;
                 case "npc":
-                    LoadedFileName = FileName.NPC;
+                    LoadedFileName = FileType.NPC;
                     break;
                 case "scenedata":
-                    LoadedFileName = FileName.SCENEDATA;
+                    LoadedFileName = FileType.SCENEDATA;
                     break;
                 case "skill":
-                    LoadedFileName = FileName.SKILL;
+                    LoadedFileName = FileType.SKILL;
                     break;                              
                 case "talk":
-                    LoadedFileName = FileName.TALK;
+                    LoadedFileName = FileType.TALK;
                     break;
                 default:
                     MessageBox.Show("No Game Files of That Name Recognized by this Translator!");
@@ -907,22 +892,34 @@ namespace WLO_Translator_WPF
 
             FileItemProperties = new FileItemProperties(LoadedFileName);
 
-            mWindowLoadingBar = new WindowLoadingBar("Loading Data", "Loading Item Data From File", "Loaded: ", 1);
-            mWindowLoadingBar.WindowStartupLocation = WindowStartupLocation.CenterOwner;
-            mWindowLoadingBar.Owner = Application.Current.MainWindow;
-
             // Load in text from file
-            mScintillaWPFTextBox.Scintilla.Text = "";
-            mListBoxFoundItems.Items.Clear();
-            mListBoxStoredItems.Items.Clear();
-
             string fileText = File.ReadAllText(filePath, Encoding.GetEncoding(1252));
             mOpenFileText   = fileText;
-            fileText        = TextManager.CleanStringFromNewLinesAndBadChars(fileText);
 
-            mScintillaWPFTextBox.ReadOnly       = false;
-            mScintillaWPFTextBox.Scintilla.Text = fileText;
-            mScintillaWPFTextBox.ReadOnly       = true;
+            // Set file text to the Scintilla text box file viewer
+            if (!isMultiTranslator)
+            {
+                mScintillaWPFTextBox.Scintilla.Text     = "";
+                mListBoxFoundItems.ItemsSource          = new ObservableCollection<Item>();
+                mListBoxStoredItems.ItemsSource         = new ObservableCollection<Item>();
+                mItemSourceListBoxFoundItemsTemporary   = new ObservableCollection<Item>();
+                mItemSourceListBoxStoredItemsTemporary  = new ObservableCollection<Item>();
+
+                fileText = TextManager.CleanStringFromNewLinesAndBadChars(fileText);
+                _ = Task.Run(() =>
+                {
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        mScintillaWPFTextBox.Scintilla.SuspendLayout();
+                        mScintillaWPFTextBox.ReadOnly = false;
+
+                        mScintillaWPFTextBox.Scintilla.Text = fileText;
+
+                        mScintillaWPFTextBox.ReadOnly = true;
+                        mScintillaWPFTextBox.Scintilla.ResumeLayout();
+                    });
+                });
+            }
 
             // Extract item data from the loaded file
             mBackgroundWorkerFoundItemData = new BackgroundWorker(); // () => ThreadOpenFileToTranslate(fileName)
@@ -930,11 +927,24 @@ namespace WLO_Translator_WPF
             mBackgroundWorkerFoundItemData.DoWork             += BackgroundWorkerFoundItemData_DoWork;
             mBackgroundWorkerFoundItemData.ProgressChanged    += BackgroundWorkerFoundItemData_ProgressChanged;
             mBackgroundWorkerFoundItemData.RunWorkerCompleted += BackgroundWorkerFoundItemData_RunWorkerCompleted;
-            mBackgroundWorkerFoundItemData.RunWorkerAsync(filePath);
-
-            _ = Task.Run(() => { Application.Current.Dispatcher.Invoke(() => { mWindowLoadingBar.ShowDialog(); }); });
-            //mWindowLoadingBar.ShowDialog();
+            mBackgroundWorkerFoundItemData.RunWorkerAsync(new object[] { filePath, isMultiTranslator });
+            
             return true;
+        }        
+
+        public void SetProjectOpenFileName(ref Grid gridProjectFileName, string fileName)
+        {
+            string name = TextManager.GetFileTypeToString(FileItemProperties.FileType);
+            (gridProjectFileName.Children[0] as TextBlock).Text     = name;
+            (gridProjectFileName.Children[0] as TextBlock).ToolTip  = fileName;
+             gridProjectFileName.Visibility = Visibility.Visible;
+        }
+
+        public void RemoveProjectOpenFileName(ref Grid gridProjectFileName)
+        {
+            (gridProjectFileName.Children[0] as TextBlock).Text     = "";
+            (gridProjectFileName.Children[0] as TextBlock).ToolTip  = "";
+             gridProjectFileName.Visibility = Visibility.Hidden;
         }
 
         public void CloseFileToTranslate()
@@ -943,99 +953,167 @@ namespace WLO_Translator_WPF
             mScintillaWPFTextBox.ReadOnly       = false;
             mScintillaWPFTextBox.Scintilla.Text = "";
             mScintillaWPFTextBox.ReadOnly       = true;
-            mListBoxFoundItems.Items.Clear();
-            mListBoxStoredItems.Items.Clear();
+            mListBoxFoundItems.ItemsSource      = new ObservableCollection<Item>();
+            mListBoxStoredItems.ItemsSource     = new ObservableCollection<Item>();
+            FileItemProperties = null;
 
             ItemSearch.ClearStoredItemsWhileSearching();
 
             mOpenFileText = null;
             mOpenFileData = null;
-        }
+        }        
 
-        private void BackgroundWorkerFoundItemData_ProgressChanged(object sender, ProgressChangedEventArgs e)
+        private async Task StoreItemsInListBoxAsync(ObservableCollection<Item> observableItemCollection, List<ItemData> listItemsToAdd,
+            double progressPercentage, bool isStoredItems, bool isMultiTranslator)
         {
-            _ = System.Threading.Tasks.Task.Run(() =>
+            if (!isMultiTranslator)
             {
-                Thread.Sleep(Constants.LOADING_SLEEP_LENGTH);
+                List<Task<List<Item>>> tasks = new List<Task<List<Item>>>();
+                Stack<List<int>> indiceStack = new Stack<List<int>>();
 
-                mDispatcher.Invoke(() =>
+                int itemsPerTask = 80;
+                for (int i = 0; i < listItemsToAdd.Count; i += itemsPerTask)
                 {
-                    // Get the contents of the mFoundItemsToAdd list as an atomic operation
-                    mFoundItemsToAddSemaphore.WaitOne();
-                        ItemData[] foundItemsToAdd = new ItemData[mFoundItemsToAdd.Count];
-                        mFoundItemsToAdd.CopyTo(foundItemsToAdd);
-                        mFoundItemsToAdd.Clear();
-                    mFoundItemsToAddSemaphore.Release();
+                    if (i + itemsPerTask > listItemsToAdd.Count)
+                        itemsPerTask = listItemsToAdd.Count - i;
 
-                    foreach (ItemData item in foundItemsToAdd)
+                    List<int> indice = new List<int>();
+                    for (int j = 0; j < itemsPerTask; ++j)
                     {
-                        //mListBox.ItemsSource.GetEnumerator().MoveNext();
-                        mListBoxFoundItems.Items.Add(item.ToItem(mRoutedEventHandlerButtonClickUpdateItem,
-                            mRoutedEventHandlerButtonClickJumpToWholeItem,
-                            mRoutedEventHandlerButtonClickJumpToID,
-                            mRoutedEventHandlerButtonClickJumpToName,
-                            mRoutedEventHandlerButtonClickJumpToDescription,
-                            mRoutedEventHandlerButtonClickJumpToExtra1,
-                            mRoutedEventHandlerButtonClickJumpToExtra2,
-                            FileItemProperties.HasDescription,
-                            FileItemProperties.HasExtras));
+                        ItemData itemData = listItemsToAdd[i + j];
+                        indice.Add(i + j);
+                    }
+                    indiceStack.Push(indice);
+                }
 
-                        if (mListBoxFoundItems.Items.Count > 1 &&
-                            (mListBoxFoundItems.Items[mListBoxFoundItems.Items.Count - 2] as Item).ItemEndPosition >=
-                            (mListBoxFoundItems.Items[mListBoxFoundItems.Items.Count - 1] as Item).ItemStartPosition)
+                Random random = new Random();
+                indiceStack.Reverse();
+                
+                while (indiceStack.Count > 0)
+                {
+                    Thread.Sleep(50 + random.Next(0, 50));
+                    List<int> indice = indiceStack.Pop();
+                    tasks.Add(Task.Run(() =>
+                    {
+                        return mDispatcher.Invoke(() =>
+                        {
+                            using (var d = mDispatcher.DisableProcessing())
+                            {
+                                List<Item> items = new List<Item>();
+                                foreach (int index in indice)
+                                {
+                                    ItemData itemData = listItemsToAdd[index];
+                                    items.Add(itemData.ToItem(mRoutedEventHandlerButtonClickUpdateItem,
+                                        mRoutedEventHandlerButtonClickJumpToWholeItem,
+                                        mRoutedEventHandlerButtonClickJumpToID,
+                                        mRoutedEventHandlerButtonClickJumpToName,
+                                        mRoutedEventHandlerButtonClickJumpToDescription,
+                                        mRoutedEventHandlerButtonClickJumpToExtra1,
+                                        mRoutedEventHandlerButtonClickJumpToExtra2,
+                                        FileItemProperties.HasDescription,
+                                        FileItemProperties.HasExtras));
+                                }
+
+                                return items;
+                            }
+                        });
+                    }));
+                }
+
+                List<Item> result;
+                tasks.Reverse();
+
+                foreach (Task<List<Item>> task in tasks)
+                {
+                    result = await task;
+                    foreach (Item item in result)
+                    {
+                        observableItemCollection.Add(item);
+
+                        if (observableItemCollection.Count > 1 &&
+                            observableItemCollection[observableItemCollection.Count - 2].ItemEndPosition >=
+                            observableItemCollection[observableItemCollection.Count - 1].ItemStartPosition)
                             throw new ArgumentException("ItemEndPosition >= ItemStartPosition");
                     }
-
-                    mWindowLoadingBar.Value = e.ProgressPercentage;
-                });
-            });
-        }
-
-        private void BackgroundWorkerFoundItemData_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
-        {
-            LoadItemData(e.Result as string);
-        }
-
-        public string ExportFile()
-        {
-            SaveFileDialog saveFileDialog   = new SaveFileDialog();
-            saveFileDialog.Filter           = "Data files (*.dat)|*.dat|Alla filer (*.*)|*.*";
-            saveFileDialog.Title            = "Export File";
-            saveFileDialog.DefaultExt       = ".dat";
-            saveFileDialog.FileName         = TextManager.GetFileNameWithFirstLettersCapitalized(FileItemProperties.FileName) + ".dat";
-            var result = saveFileDialog.ShowDialog();
-
-            if (result.Value)
+                }
+            }
+            else
             {
-                string text;
-                if (TranslatedFileText != null && TranslatedFileText != "")
-                    text = TranslatedFileText;
-                else if (OpenFileText != null && OpenFileText != "")
-                    text = OpenFileText;
+                if (isStoredItems)
+                    mStoredItemsToAdd.AddRange(listItemsToAdd);
                 else
-                    return null;
-
-                File.WriteAllText(saveFileDialog.FileName, text, Encoding.GetEncoding(1252));
-
-                return saveFileDialog.FileName;
+                    mFoundItemsToAdd.AddRange(listItemsToAdd);
             }
 
-            return "cancelled";
+            if (!LoadingBarManager.IsLoadingBarNull())
+            {
+                if (isStoredItems)
+                    LoadingBarManager.Value += progressPercentage;
+                else
+                    LoadingBarManager.Value  = progressPercentage;
+            }
+
+            if (isStoredItems && IsFileOpenToTranslateRunning && LoadingBarManager.IsLoadingCompleted())
+            {
+                if (!isMultiTranslator)
+                {
+                    LoadingBarManager.CloseLoadingBar();
+                    //ListBoxUpdateSuspender.ResumeUpdate(mListBoxFoundItems);
+                    //ListBoxUpdateSuspender.ResumeUpdate(mListBoxStoredItems);
+                    mListBoxFoundItems.ItemsSource      = mItemSourceListBoxFoundItemsTemporary;
+                    mListBoxStoredItems.ItemsSource     = mItemSourceListBoxStoredItemsTemporary;
+                    //Thread.Sleep(Constants.LOADING_SLEEP_LENGTH * 5);
+                    //mListBoxFoundItems.InvalidateVisual();
+                    //mListBoxStoredItems.InvalidateVisual();
+                }
+
+                IsFileOpenToTranslateRunning            = false;
+                IsFoundItemDataCollectionCompleted      = false;
+                IsStoredItemDataToItemsProcessRunning   = false;
+            }
         }
 
-        string StringFromRichTextBox(RichTextBox richTextBox)
+        public string ExportFile(string path = null, string text = null)
         {
-            System.Windows.Documents.TextRange textRange = new System.Windows.Documents.TextRange
-            (
-                // TextPointer to the start of content in the RichTextBox.
-                richTextBox.Document.ContentStart,
-                // TextPointer to the end of content in the RichTextBox.
-                richTextBox.Document.ContentEnd
-            );
+            if (path == null)
+            {
+                SaveFileDialog saveFileDialog   = new SaveFileDialog();
+                saveFileDialog.Filter           = "Data files (*.dat)|*.dat|Alla filer (*.*)|*.*";
+                saveFileDialog.Title            = "Export File";
+                saveFileDialog.DefaultExt       = ".dat";
+                saveFileDialog.FileName         = TextManager.GetFileTypeToString(FileItemProperties.FileType) + ".dat";
+                var result = saveFileDialog.ShowDialog();
 
-            // The Text property on a TextRange object returns a string
-            // representing the plain text content of the TextRange.
-            return textRange.Text;
+                if (result.Value)
+                    path = saveFileDialog.FileName;
+                else
+                    return "cancelled";
+            }
+
+            if (text == null)
+            {
+                if ((text = GetOpenFileText()) == null)
+                    return null;
+            }
+
+            File.WriteAllText(path, text, Encoding.GetEncoding(1252));
+
+            return path;
         }
+
+        public void SetReportInfoText(string text)
+        {
+            mLabelReportInfo.Content = text;
+        }
+
+        public string GetOpenFileText()
+        {
+            if (TranslatedFileText != null && TranslatedFileText != "")
+                return TranslatedFileText;
+            else if (OpenFileText != null && OpenFileText != "")
+                return OpenFileText;
+            else
+                return null;
+        }        
     }
 }

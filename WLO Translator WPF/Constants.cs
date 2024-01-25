@@ -41,9 +41,11 @@
         public const int    TALK_DATA_INITIAL_OFFSET                                = 2;
 
         public const int    LOADING_SLEEP_LENGTH                                    = 80;
-        public const int    LOADING_DATA_PER_REPORT                                 = 10000;
 
         public const char   CHAR_TO_REPLACE_NULL_CHAR                               = '.';
         public const char   CHAR_TO_REPLACE_OTHER_CHAR                              = '*';
+
+        //File Endings
+        public const string FILE_ENDING_STORED_ITEM_DATA                            = ".wtsi"; // WLO Translate Saved Items
     }
 }
