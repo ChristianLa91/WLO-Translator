@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows.Controls;
@@ -8,21 +7,21 @@ namespace WLO_Translator_WPF
 {
     public static class ItemSearch
     {
-        private static List<Item>       mFoundItemsWhileSearching;
-        private static List<ItemData>   mFoundItemDataWhileSearching;
-        private static Dictionary<ItemData, Item> mFoundItemAndDataItemDictionary;
-        private static List<Item>       mStoredItemsWhileSearching;
-        private static List<ItemData>   mStoredItemDataWhileSearching;
-        private static Dictionary<ItemData, Item> mStoredItemAndDataItemDictionary;
-        private static SearchOption     mSearchOption = SearchOption.FOUND_ITEM_NAME;
+        private static List<Item>                   mFoundItemsWhileSearching;
+        private static List<ItemData>               mFoundItemDataWhileSearching;
+        private static Dictionary<ItemData, Item>   mFoundItemAndDataItemDictionary;
+        private static List<Item>                   mStoredItemsWhileSearching;
+        private static List<ItemData>               mStoredItemDataWhileSearching;
+        private static Dictionary<ItemData, Item>   mStoredItemAndDataItemDictionary;
+        private static SearchOption                 mSearchOption = SearchOption.FOUND_ITEM_NAME;
 
-        private static string           mSearchStringOld;
-        private static bool             mShowItemsWithBadCharsOld;
-        private static bool             mShowItemsWithUnusualCharsOld;
-        //private static bool           mShowItemsWithoutDescriptionsOld;
-        //private static bool           mShowItemsWithSameIDsOld;
-        //private static bool           mShowItemsWithoutMatchOld;
-        //private static bool           mShowItemsWithoutFirstCharBeingALetterOld;
+        private static string                       mSearchStringOld;
+        private static bool                         mShowItemsWithBadCharsOld;
+        private static bool                         mShowItemsWithUnusualCharsOld;
+        //private static bool                       mShowItemsWithoutDescriptionsOld;
+        //private static bool                       mShowItemsWithSameIDsOld;
+        //private static bool                       mShowItemsWithoutMatchOld;
+        //private static bool                       mShowItemsWithoutFirstCharBeingALetterOld;
 
         public enum SearchOption
         {

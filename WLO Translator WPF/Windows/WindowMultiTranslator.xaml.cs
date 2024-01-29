@@ -257,7 +257,7 @@ namespace WLO_Translator_WPF
         //TODO: Add the former? untranslated items to items which groups them so that they can easily added to each stored item list
         private void ButtonStoreItems_Click(object sender, RoutedEventArgs e)
         {
-            if (mListBoxItemMTData?.Count == 0 == true)
+            if (mListBoxItemMTData == null || mListBoxItemMTData.Count == 0)
                 return;
 
             for (int i = 0; i < mListBoxItemMTData.Count; ++i)

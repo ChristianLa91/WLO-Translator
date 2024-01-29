@@ -246,7 +246,7 @@
                     <Button x:Name="ButtonTransferSelectedItemsToStoredItems" Margin="0,108,10,0" VerticalAlignment="Top" Height="23" HorizontalContentAlignment="Left" Click="ButtonTransferSelectedItemsToStoredItems_Click" HorizontalAlignment="Right" Width="137">
                         <StackPanel Orientation="Horizontal">
                             <Image Source="Images/Store all Items.png" Stretch="Fill" Margin="5,3,3,3"/>
-                            <TextBlock><Run Text="Store Selected Items"/></TextBlock>
+                            <TextBlock><Run Text="Store Selected Item"/></TextBlock>
                         </StackPanel>
                     </Button>
                 </Grid>

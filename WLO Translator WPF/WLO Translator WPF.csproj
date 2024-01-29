@@ -53,6 +53,9 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
+  <PropertyGroup>
+    <ApplicationIcon>Icon.ico</ApplicationIcon>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="Azure.Core, Version=1.25.0.0, Culture=neutral, PublicKeyToken=92742159e12e44c8, processorArchitecture=MSIL">
       <HintPath>..\packages\Azure.Core.1.25.0\lib\net461\Azure.Core.dll</HintPath>
@@ -525,6 +528,7 @@
     <Resource Include="Images\Arrow Next.png" />
     <Resource Include="Images\Document.png" />
     <Resource Include="Images\Wonderland Online - Landscape.png" />
+    <Resource Include="Icon.ico" />
     <Content Include="IO\DatabaseProgramSettings.mdf">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
@@ -557,6 +561,13 @@
     <Error Condition="!Exists('..\packages\Microsoft.VisualStudio.SDK.Analyzers.16.10.10\build\Microsoft.VisualStudio.SDK.Analyzers.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.VisualStudio.SDK.Analyzers.16.10.10\build\Microsoft.VisualStudio.SDK.Analyzers.targets'))" />
     <Error Condition="!Exists('..\packages\Microsoft.Data.SqlClient.SNI.5.1.1\build\net462\Microsoft.Data.SqlClient.SNI.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.Data.SqlClient.SNI.5.1.1\build\net462\Microsoft.Data.SqlClient.SNI.targets'))" />
     <Error Condition="!Exists('..\packages\Microsoft.EntityFrameworkCore.Design.3.1.32\build\net461\Microsoft.EntityFrameworkCore.Design.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.EntityFrameworkCore.Design.3.1.32\build\net461\Microsoft.EntityFrameworkCore.Design.props'))" />
+  </Target>
+  <Target Name="AfterResolveReferences">
+	<ItemGroup>
+	  <EmbeddedResource Include="@(ReferenceCopyLocalPaths)" Condition="'%(ReferenceCopyLocalPaths.Extension)' == '.dll'">
+		<LogicalName>%(ReferenceCopyLocalPaths.DestinationSubDirectory)%(ReferenceCopyLocalPaths.Filename)%(ReferenceCopyLocalPaths.Extension)</LogicalName>
+	  </EmbeddedResource>
+	</ItemGroup>
   </Target>
   <Import Project="..\packages\Microsoft.CodeAnalysis.BannedApiAnalyzers.3.3.2\build\Microsoft.CodeAnalysis.BannedApiAnalyzers.targets" Condition="Exists('..\packages\Microsoft.CodeAnalysis.BannedApiAnalyzers.3.3.2\build\Microsoft.CodeAnalysis.BannedApiAnalyzers.targets')" />
   <Import Project="..\packages\Microsoft.VisualStudio.Setup.Configuration.Interop.3.6.2115\build\Microsoft.VisualStudio.Setup.Configuration.Interop.targets" Condition="Exists('..\packages\Microsoft.VisualStudio.Setup.Configuration.Interop.3.6.2115\build\Microsoft.VisualStudio.Setup.Configuration.Interop.targets')" />

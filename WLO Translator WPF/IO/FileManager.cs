@@ -133,7 +133,7 @@ namespace WLO_Translator_WPF
         //private Database                    mDatabase;
 
         public  bool                        IsFileOpenToTranslateRunning            { get; private set; } = false;
-        private bool                        IsFoundItemDataCollectionCompleted      { get; set;         } = false;
+        //private bool                        IsFoundItemDataCollectionCompleted      { get; set;         } = false;
         private bool                        IsStoredItemDataToItemsProcessRunning   { get; set;         } = false;
 
         private Label                       mLabelReportInfo;
@@ -415,6 +415,8 @@ namespace WLO_Translator_WPF
             string savefilePath = Paths.AssociatedStoredItemData + Path.GetFileNameWithoutExtension(fileName)
                 + Constants.FILE_ENDING_STORED_ITEM_DATA;
 
+            double maximumStoredItems = -1, progress = 0;
+
             // Load last saved data, if file exists
             if (File.Exists(savefilePath))
             {
@@ -432,7 +434,7 @@ namespace WLO_Translator_WPF
                         {
                             if (reader.GetAttribute("ItemCount") != null)
                             {
-                                double maximumStoredItems = double.Parse(reader.GetAttribute("ItemCount"));// });
+                                maximumStoredItems = double.Parse(reader.GetAttribute("ItemCount"));// });
 
                                 if (!IsStoredItemDataToItemsProcessRunning && IsFileOpenToTranslateRunning)
                                 {
@@ -447,11 +449,14 @@ namespace WLO_Translator_WPF
                         {                            
                             ItemData currentItemData = new ItemData();
 
-                            if (reader.GetAttribute("ID3") != null && reader.GetAttribute("ID2") != null && reader.GetAttribute("ID1") != null)
-                                currentItemData.ID = new int[] { int.Parse(reader.GetAttribute("ID1")), int.Parse(reader.GetAttribute("ID2")),
+                            if (reader.GetAttribute("ID3") != null && reader.GetAttribute("ID2") != null
+                                && reader.GetAttribute("ID1") != null)
+                                currentItemData.ID = new int[] { int.Parse(reader.GetAttribute("ID1")),
+                                    int.Parse(reader.GetAttribute("ID2")),
                                 int.Parse(reader.GetAttribute("ID3"))};
                             else if (reader.GetAttribute("ID1") != null && reader.GetAttribute("ID2") != null)
-                                currentItemData.ID = new int[] { int.Parse(reader.GetAttribute("ID1")), int.Parse(reader.GetAttribute("ID2")), 0};
+                                currentItemData.ID = new int[] { int.Parse(reader.GetAttribute("ID1")),
+                                    int.Parse(reader.GetAttribute("ID2")), 0};
 
                             if (reader.GetAttribute("Name") != null)
                                 currentItemData.Name = reader.GetAttribute("Name");
@@ -504,15 +509,16 @@ namespace WLO_Translator_WPF
 
                             storedItemsToAdd.Add(currentItemData);
 
-                            if (lastReportedTime.AddSeconds(0.01) < DateTime.Now)
+                            if (lastReportedTime.AddSeconds(0.02) < DateTime.Now)
                             {
-                                ReportProgress(ref storedItemsToAdd, storedItemsToAdd.Count, isMultiTranslator, true);
+                                progress += storedItemsToAdd.Count;
+                                ReportProgress(ref storedItemsToAdd, (int)progress, isMultiTranslator, true);
                                 lastReportedTime = DateTime.Now;
                             }
                         }
                     }
 
-                    ReportProgress(ref storedItemsToAdd, storedItemsToAdd.Count, isMultiTranslator, true);
+                    ReportProgress(ref storedItemsToAdd, (int)maximumStoredItems, isMultiTranslator, true);
 
                     reader.Close();
                 }
@@ -522,12 +528,98 @@ namespace WLO_Translator_WPF
                     Console.WriteLine("Exception: " + e.Message);
                     reader.Close();
 
-                    ReportProgress(ref storedItemsToAdd, storedItemsToAdd.Count, isMultiTranslator, true);
+                    ReportProgress(ref storedItemsToAdd, (int)maximumStoredItems, isMultiTranslator, true);
                 }
             }
             else
                 Console.WriteLine("Error: " + "The file \"" + savefilePath + "\" couldn't be opened");
         }
+
+        public bool OpenFileToTranslate(string filePath, bool isMultiTranslator = false)
+        {
+            IsFileOpenToTranslateRunning            = true;
+            //IsFoundItemDataCollectionCompleted      = false;
+            IsStoredItemDataToItemsProcessRunning   = false;
+
+            if (mBackgroundWorkerFoundItemData != null)
+            {
+                mBackgroundWorkerFoundItemData.Dispose();
+                mBackgroundWorkerFoundItemData = null;
+            }
+
+            string fileName = Path.GetFileNameWithoutExtension(filePath).ToLower();
+            switch (fileName)
+            {
+                case "actioninfo":
+                    LoadedFileName = FileType.ACTIONINFO;
+                    break;
+                case "alogin":
+                    LoadedFileName = FileType.ALOGINEXE;
+                    break;
+                case "item":
+                    LoadedFileName = FileType.ITEM;
+                    break;
+                case "mark":
+                    LoadedFileName = FileType.MARK;
+                    break;
+                case "npc":
+                    LoadedFileName = FileType.NPC;
+                    break;
+                case "scenedata":
+                    LoadedFileName = FileType.SCENEDATA;
+                    break;
+                case "skill":
+                    LoadedFileName = FileType.SKILL;
+                    break;                              
+                case "talk":
+                    LoadedFileName = FileType.TALK;
+                    break;
+                default:
+                    MessageBox.Show("No Game Files of That Name Recognized by this Translator!");
+                    return false;
+            }
+
+            FileItemProperties = new FileItemProperties(LoadedFileName);
+
+            // Load in text from file
+            string fileText = File.ReadAllText(filePath, Encoding.GetEncoding(1252));
+            mOpenFileText   = fileText;
+
+            // Set file text to the Scintilla text box file viewer
+            if (!isMultiTranslator)
+            {
+                mScintillaWPFTextBox.Scintilla.Text     = "";
+                mListBoxFoundItems.ItemsSource          = new ObservableCollection<Item>();
+                mListBoxStoredItems.ItemsSource         = new ObservableCollection<Item>();
+                mItemSourceListBoxFoundItemsTemporary   = new ObservableCollection<Item>();
+                mItemSourceListBoxStoredItemsTemporary  = new ObservableCollection<Item>();
+
+                fileText = TextManager.CleanStringFromNewLinesAndBadChars(fileText);
+                _ = Task.Run(() =>
+                {
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        mScintillaWPFTextBox.Scintilla.SuspendLayout();
+                        mScintillaWPFTextBox.ReadOnly = false;
+
+                        mScintillaWPFTextBox.Scintilla.Text = fileText;
+
+                        mScintillaWPFTextBox.ReadOnly = true;
+                        mScintillaWPFTextBox.Scintilla.ResumeLayout();
+                    });
+                });
+            }
+
+            // Extract item data from the loaded file
+            mBackgroundWorkerFoundItemData = new BackgroundWorker(); // () => ThreadOpenFileToTranslate(fileName)
+            mBackgroundWorkerFoundItemData.WorkerReportsProgress = true;
+            mBackgroundWorkerFoundItemData.DoWork             += BackgroundWorkerFoundItemData_DoWork;
+            mBackgroundWorkerFoundItemData.ProgressChanged    += BackgroundWorkerFoundItemData_ProgressChanged;
+            mBackgroundWorkerFoundItemData.RunWorkerCompleted += BackgroundWorkerFoundItemData_RunWorkerCompleted;
+            mBackgroundWorkerFoundItemData.RunWorkerAsync(new object[] { filePath, isMultiTranslator });
+            
+            return true;
+        }        
 
         #region Background worker found item data
         private void BackgroundWorkerFoundItemData_DoWork(object sender, DoWorkEventArgs e)
@@ -672,16 +764,15 @@ namespace WLO_Translator_WPF
                     if (itemData != null)
                     {
                         foundItemsToAdd.Add(itemData);
-                        Console.WriteLine("Completed Collection of Found Item With Name: " + itemData.Name);
+                        //Console.WriteLine("Completed Collection of Found Item With Name: " + itemData.Name);
                     }
-                    else
-                        Console.WriteLine("Uncompleted Collection of Item");
+                    //else
+                        //Console.WriteLine("Uncompleted Collection of Item");
                 }
                 progress += dataPerTask;
                 if (progress >= bytes.Length / 5)
                 {
                     ReportProgress(ref foundItemsToAdd, progress, isMultiTranslator, false);
-                    //lastReportedTime = DateTime.Now;
                     progress = 0;
                 }
                 task.Dispose();
@@ -703,7 +794,7 @@ namespace WLO_Translator_WPF
 
         private void BackgroundWorkerFoundItemData_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
         {
-            IsFoundItemDataCollectionCompleted = true;
+            //IsFoundItemDataCollectionCompleted = true;
             object[] arguments = e.Result as object[];
             StartBackgroundWorkerLoadStoredItemData(arguments[0] as string, (bool)arguments[1]);
         }
@@ -736,7 +827,7 @@ namespace WLO_Translator_WPF
         {
             object[] arguments = e.Argument as object[];
 
-            while (!IsFoundItemDataCollectionCompleted)
+            while (!LoadingBarManager.IsLoadingCompleted()/*!IsFoundItemDataCollectionCompleted*/)
                 Thread.Sleep(Constants.LOADING_SLEEP_LENGTH);
 
             LoadStoredItemData(arguments[0] as string, (bool)arguments[1]);
@@ -774,7 +865,8 @@ namespace WLO_Translator_WPF
             itemData.Clear();
             int sleepTime = 500;//Constants.LOADING_SLEEP_LENGTH * (isStoredItems ? 2 : 1);
 
-            while (!LoadingBarManager.IsValueChanged)
+            DateTime waitEnd = DateTime.Now.AddSeconds(5);
+            while (!LoadingBarManager.IsValueChanged && waitEnd > DateTime.Now)
                 Thread.Sleep(sleepTime);
         }
 
@@ -846,92 +938,6 @@ namespace WLO_Translator_WPF
             item.IDEndPosition      = nameEndPositionWithOffset + 2;
         }
 
-        public bool OpenFileToTranslate(string filePath, bool isMultiTranslator = false)
-        {
-            IsFileOpenToTranslateRunning            = true;
-            IsFoundItemDataCollectionCompleted      = false;
-            IsStoredItemDataToItemsProcessRunning   = false;
-
-            if (mBackgroundWorkerFoundItemData != null)
-            {
-                mBackgroundWorkerFoundItemData.Dispose();
-                mBackgroundWorkerFoundItemData = null;
-            }
-
-            string fileName = Path.GetFileNameWithoutExtension(filePath).ToLower();
-            switch (fileName)
-            {
-                case "actioninfo":
-                    LoadedFileName = FileType.ACTIONINFO;
-                    break;
-                case "alogin":
-                    LoadedFileName = FileType.ALOGINEXE;
-                    break;
-                case "item":
-                    LoadedFileName = FileType.ITEM;
-                    break;
-                case "mark":
-                    LoadedFileName = FileType.MARK;
-                    break;
-                case "npc":
-                    LoadedFileName = FileType.NPC;
-                    break;
-                case "scenedata":
-                    LoadedFileName = FileType.SCENEDATA;
-                    break;
-                case "skill":
-                    LoadedFileName = FileType.SKILL;
-                    break;                              
-                case "talk":
-                    LoadedFileName = FileType.TALK;
-                    break;
-                default:
-                    MessageBox.Show("No Game Files of That Name Recognized by this Translator!");
-                    return false;
-            }
-
-            FileItemProperties = new FileItemProperties(LoadedFileName);
-
-            // Load in text from file
-            string fileText = File.ReadAllText(filePath, Encoding.GetEncoding(1252));
-            mOpenFileText   = fileText;
-
-            // Set file text to the Scintilla text box file viewer
-            if (!isMultiTranslator)
-            {
-                mScintillaWPFTextBox.Scintilla.Text     = "";
-                mListBoxFoundItems.ItemsSource          = new ObservableCollection<Item>();
-                mListBoxStoredItems.ItemsSource         = new ObservableCollection<Item>();
-                mItemSourceListBoxFoundItemsTemporary   = new ObservableCollection<Item>();
-                mItemSourceListBoxStoredItemsTemporary  = new ObservableCollection<Item>();
-
-                fileText = TextManager.CleanStringFromNewLinesAndBadChars(fileText);
-                _ = Task.Run(() =>
-                {
-                    Application.Current.Dispatcher.Invoke(() =>
-                    {
-                        mScintillaWPFTextBox.Scintilla.SuspendLayout();
-                        mScintillaWPFTextBox.ReadOnly = false;
-
-                        mScintillaWPFTextBox.Scintilla.Text = fileText;
-
-                        mScintillaWPFTextBox.ReadOnly = true;
-                        mScintillaWPFTextBox.Scintilla.ResumeLayout();
-                    });
-                });
-            }
-
-            // Extract item data from the loaded file
-            mBackgroundWorkerFoundItemData = new BackgroundWorker(); // () => ThreadOpenFileToTranslate(fileName)
-            mBackgroundWorkerFoundItemData.WorkerReportsProgress = true;
-            mBackgroundWorkerFoundItemData.DoWork             += BackgroundWorkerFoundItemData_DoWork;
-            mBackgroundWorkerFoundItemData.ProgressChanged    += BackgroundWorkerFoundItemData_ProgressChanged;
-            mBackgroundWorkerFoundItemData.RunWorkerCompleted += BackgroundWorkerFoundItemData_RunWorkerCompleted;
-            mBackgroundWorkerFoundItemData.RunWorkerAsync(new object[] { filePath, isMultiTranslator });
-            
-            return true;
-        }        
-
         public void SetProjectOpenFileName(ref Grid gridProjectFileName, string fileName)
         {
             string name = TextManager.GetFileTypeToString(FileItemProperties.FileType);
@@ -983,6 +989,7 @@ namespace WLO_Translator_WPF
                         ItemData itemData = listItemsToAdd[i + j];
                         indice.Add(i + j);
                     }
+
                     indiceStack.Push(indice);
                 }
 
@@ -991,33 +998,49 @@ namespace WLO_Translator_WPF
                 
                 while (indiceStack.Count > 0)
                 {
-                    Thread.Sleep(50 + random.Next(0, 50));
-                    List<int> indice = indiceStack.Pop();
-                    tasks.Add(Task.Run(() =>
+                    try
                     {
-                        return mDispatcher.Invoke(() =>
+                        Thread.Sleep(50 + random.Next(0, 50));
+                        List<int> indice = indiceStack.Pop();
+                        tasks.Add(Task.Run(() =>
                         {
-                            using (var d = mDispatcher.DisableProcessing())
+                            try
                             {
-                                List<Item> items = new List<Item>();
-                                foreach (int index in indice)
+                                return mDispatcher.Invoke(() =>
                                 {
-                                    ItemData itemData = listItemsToAdd[index];
-                                    items.Add(itemData.ToItem(mRoutedEventHandlerButtonClickUpdateItem,
-                                        mRoutedEventHandlerButtonClickJumpToWholeItem,
-                                        mRoutedEventHandlerButtonClickJumpToID,
-                                        mRoutedEventHandlerButtonClickJumpToName,
-                                        mRoutedEventHandlerButtonClickJumpToDescription,
-                                        mRoutedEventHandlerButtonClickJumpToExtra1,
-                                        mRoutedEventHandlerButtonClickJumpToExtra2,
-                                        FileItemProperties.HasDescription,
-                                        FileItemProperties.HasExtras));
-                                }
+                                    using (var d = mDispatcher.DisableProcessing())
+                                    {
+                                        List<Item> items = new List<Item>();
+                                        foreach (int index in indice)
+                                        {
+                                            ItemData itemData = listItemsToAdd[index];
+                                            items.Add(itemData.ToItem(mRoutedEventHandlerButtonClickUpdateItem,
+                                                mRoutedEventHandlerButtonClickJumpToWholeItem,
+                                                mRoutedEventHandlerButtonClickJumpToID,
+                                                mRoutedEventHandlerButtonClickJumpToName,
+                                                mRoutedEventHandlerButtonClickJumpToDescription,
+                                                mRoutedEventHandlerButtonClickJumpToExtra1,
+                                                mRoutedEventHandlerButtonClickJumpToExtra2,
+                                                FileItemProperties.HasDescription,
+                                                FileItemProperties.HasExtras));
+                                        }
 
-                                return items;
+                                        return items;
+                                    }
+                                });
                             }
-                        });
-                    }));
+                            catch (ArgumentException e)
+                            {
+                                MessageBox.Show(e.Message);
+                                throw e;
+                            }
+                        }));
+                    }
+                    catch (ArgumentException e)
+                    {
+                        MessageBox.Show(e.Message);
+                        throw e;
+                    }
                 }
 
                 List<Item> result;
@@ -1033,7 +1056,7 @@ namespace WLO_Translator_WPF
                         if (observableItemCollection.Count > 1 &&
                             observableItemCollection[observableItemCollection.Count - 2].ItemEndPosition >=
                             observableItemCollection[observableItemCollection.Count - 1].ItemStartPosition)
-                            throw new ArgumentException("ItemEndPosition >= ItemStartPosition");
+                            MessageBox.Show("ItemEndPosition >= ItemStartPosition");
                     }
                 }
             }
@@ -1047,9 +1070,7 @@ namespace WLO_Translator_WPF
 
             if (!LoadingBarManager.IsLoadingBarNull())
             {
-                if (isStoredItems)
-                    LoadingBarManager.Value += progressPercentage;
-                else
+                if (progressPercentage > LoadingBarManager.Value)
                     LoadingBarManager.Value  = progressPercentage;
             }
 
@@ -1058,17 +1079,11 @@ namespace WLO_Translator_WPF
                 if (!isMultiTranslator)
                 {
                     LoadingBarManager.CloseLoadingBar();
-                    //ListBoxUpdateSuspender.ResumeUpdate(mListBoxFoundItems);
-                    //ListBoxUpdateSuspender.ResumeUpdate(mListBoxStoredItems);
                     mListBoxFoundItems.ItemsSource      = mItemSourceListBoxFoundItemsTemporary;
                     mListBoxStoredItems.ItemsSource     = mItemSourceListBoxStoredItemsTemporary;
-                    //Thread.Sleep(Constants.LOADING_SLEEP_LENGTH * 5);
-                    //mListBoxFoundItems.InvalidateVisual();
-                    //mListBoxStoredItems.InvalidateVisual();
                 }
 
                 IsFileOpenToTranslateRunning            = false;
-                IsFoundItemDataCollectionCompleted      = false;
                 IsStoredItemDataToItemsProcessRunning   = false;
             }
         }

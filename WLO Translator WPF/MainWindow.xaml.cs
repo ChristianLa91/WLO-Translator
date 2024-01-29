@@ -583,16 +583,17 @@ namespace WLO_Translator_WPF
         {
             if (e.Key == System.Windows.Input.Key.Delete && ListBoxStoredItems.SelectedItem != null)
             {
-                int selectedIndex = ListBoxStoredItems.Items.IndexOf(ListBoxStoredItems.SelectedItem);
-                ListBoxStoredItems.Items.Remove(ListBoxStoredItems.SelectedItem);
+                ObservableCollection<Item> items = ListBoxStoredItems.ItemsSource as ObservableCollection<Item>;
+                int selectedIndex = items.IndexOf(ListBoxStoredItems.SelectedItem as Item);
+                items.Remove(ListBoxStoredItems.SelectedItem as Item);
 
                 // Set focus on the next item
-                if (ListBoxStoredItems.Items.Count > selectedIndex)
-                    (ListBoxStoredItems.Items[selectedIndex] as Item).Focus();
+                if (items.Count > selectedIndex)
+                    items[selectedIndex].Focus();
                 else if (ListBoxStoredItems.Items.Count == 1)
-                    (ListBoxStoredItems.Items[0] as Item).Focus();
-                else if (ListBoxStoredItems.Items.Count > selectedIndex - 1)
-                    (ListBoxStoredItems.Items[selectedIndex - 1] as Item).Focus();
+                    items[0].Focus();
+                else if (items.Count > selectedIndex - 1)
+                    items[selectedIndex - 1].Focus();
             }
         }
 
