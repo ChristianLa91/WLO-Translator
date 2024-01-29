@@ -1,0 +1,4 @@
+﻿CREATE TABLE TestTable
+(
+	ID INT NOT NULL PRIMARY KEY
+)

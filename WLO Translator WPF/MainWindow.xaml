@@ -3,9 +3,15 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:scintilla="clr-namespace:ScintillaNET.WPF;assembly=ScintillaNET.WPF"
+        xmlns:scintilla="clr-namespace:ScintillaNET.WPF;assembly=ScintillaNET.WPF" xmlns:wlo_translator_wpf="clr-namespace:WLO_Translator_WPF"
         mc:Ignorable="d"
-        Title="WLO Translator" Height="900" Width="1600" Icon="Images/Translate.png">
+        Title="WLO Translator" Height="900" Width="1600" Icon="Images/Translate.png" WindowStyle="None" BorderBrush="#FF9B9B9B" BorderThickness="1" SizeChanged="WindowMain_SizeChanged">
+    <WindowChrome.WindowChrome>
+        <WindowChrome 
+        CaptionHeight="{Binding ElementName=MenuMain, Path=Height}"
+        ResizeBorderThickness="5" />
+    </WindowChrome.WindowChrome>
+
     <Window.Resources>
         <BorderGapMaskConverter x:Key="BorderGapMaskConverter"/>
         <Style TargetType="{x:Type GroupBox}">
@@ -46,10 +52,91 @@
                 </Setter.Value>
             </Setter>
         </Style>
+        <Style x:Key="MenuItemStyle" TargetType="{x:Type MenuItem}">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type MenuItem}">
+                        <Border x:Name="Border" Background="Transparent">
+                            <ContentPresenter />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Border" Property="Background" Value="LightBlue" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style TargetType="{x:Type Button}" x:Name="ButtonStyle">
+            <Setter Property="Background" Value="#FFF1F1F1"></Setter>
+        </Style>
+        <Style TargetType="{x:Type CheckBox}">
+            <Setter Property="Background" Value="White" />
+            <Setter Property="BorderBrush" Value="#FF646464"/>
+            <!--                           your color here -->
+            <Setter Property="Foreground" Value="Black"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type CheckBox}">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Stretch" >
+                            <Border BorderBrush="{TemplateBinding BorderBrush}" Background="{TemplateBinding Background}" BorderThickness="{TemplateBinding BorderThickness}" Width="14" Height="14">
+                                <Grid>
+                                    <Grid Background="{TemplateBinding Foreground}" Margin="1" Visibility="Collapsed" Name="nullBlock"/>
+                                    <Path Stretch="Uniform" Width="14" Height="10" StrokeThickness="0.5"  Fill="{TemplateBinding Foreground}" Name="eliCheck" Data="F1 M 9.97498,1.22334L 4.6983,9.09834L 4.52164,9.09834L 0,5.19331L 1.27664,3.52165L 4.255,6.08833L 8.33331,1.52588e-005L 9.97498,1.22334 Z" Visibility="Collapsed"/>
+                                </Grid>
+                            </Border>
+                            <TextBlock Margin="5,0,0,0"  VerticalAlignment="Center" Foreground="{TemplateBinding Foreground}" Text="{TemplateBinding Content}"></TextBlock>
+                        </StackPanel>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="LightGray"/>
+                                <Setter Property="BorderBrush" Value="#FF5593FF"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter Property="Background" Value="#FF9C9E9F"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Background" Value="LightGray"/>
+                                <Setter Property="Foreground" Value="Gray" />
+                                <Setter Property="BorderBrush" Value="Gray"/>
+                                <Setter TargetName="eliCheck" Property="Opacity" Value="0.5"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="eliCheck" Property="Visibility" Value="Visible"></Setter>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="{x:Null}">
+                                <Setter TargetName="nullBlock" Property="Visibility" Value="Visible"></Setter>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
 
+
+        <!-- Backgrounds -->
         <BitmapImage x:Key="i0" x:Name="StoreAllItems" UriSource="Images/Store all Items.png"></BitmapImage>
-        <BitmapImage x:Key="Wonderland Online Colorful Landscape" x:Name="WonderlandOnlineColorfulLandscape" UriSource="Images/wonderland_online-424.jpg"></BitmapImage>
-        <BitmapImage x:Key="Wonderland Online Less Colorful Landscape" x:Name="WonderlandOnlineLessColorfulLandscape" UriSource="Images/wonderland_online-424 - less environment.jpg"></BitmapImage>
+        <BitmapImage x:Key="Wonderland Online Landscape" x:Name="WonderlandOnlineLandscape" UriSource="Images/Wonderland Online - Landscape.png"></BitmapImage>
+        <BitmapImage x:Key="Gray Patterns" x:Name="GrayPatterns" UriSource="Images/Background Gray Patterns.png"></BitmapImage>
+
+        <!-- Window Button -->
+        <BitmapImage x:Key="Button Minimize" x:Name="BitmapImageButtonMinimize" UriSource="Images/Top Bar Buttons/Button Minimize.png"/>
+        <BitmapImage x:Key="Button Minimize Black" x:Name="BitmapImageButtonMinimizeBlack" UriSource="Images/Top Bar Buttons/Button Minimize Black.png"/>
+        <BitmapImage x:Key="Button Minimize White" x:Name="BitmapImageButtonMinimizeWhite" UriSource="Images/Top Bar Buttons/Button Minimize White.png"/>
+
+        <BitmapImage x:Key="Button Resize Fullscreen" x:Name="BitmapImageButtonResizeFullscreen" UriSource="Images/Top Bar Buttons/Button Resize Fullscreen.png"/>
+        <BitmapImage x:Key="Button Resize Not Fullscreen" x:Name="BitmapImageButtonResizeNotFullscreen" UriSource="Images/Top Bar Buttons/Button Resize Not Fullscreen.png"/>
+        <BitmapImage x:Key="Button Resize Fullscreen Black" x:Name="BitmapImageButtonResizeFullscreenBlack" UriSource="Images/Top Bar Buttons/Button Resize Fullscreen Black.png"/>
+        <BitmapImage x:Key="Button Resize Not Fullscreen Black" x:Name="BitmapImageButtonResizeNotFullscreenBlack" UriSource="Images/Top Bar Buttons/Button Resize Not Fullscreen Black.png"/>
+        <BitmapImage x:Key="Button Resize Fullscreen White" x:Name="BitmapImageButtonResizeFullscreenWhite" UriSource="Images/Top Bar Buttons/Button Resize Fullscreen White.png"/>
+        <BitmapImage x:Key="Button Resize Not Fullscreen White" x:Name="BitmapImageButtonResizeNotFullscreenWhite" UriSource="Images/Top Bar Buttons/Button Resize Not Fullscreen White.png"/>
+
+        <BitmapImage x:Key="Button Close" x:Name="BitmapImageButtonClose" UriSource="Images/Top Bar Buttons/Button Close.png"/>
+        <BitmapImage x:Key="Button Close Black" x:Name="BitmapImageButtonCloseBlack" UriSource="Images/Top Bar Buttons/Button Close Black.png"/>
+        <BitmapImage x:Key="Button Close White" x:Name="BitmapImageButtonCloseWhite" UriSource="Images/Top Bar Buttons/Button Close White.png"/>
+
         <ContextMenu x:Key="ItemRightClickMenu">
             <MenuItem x:Name="MenuItemUpdate" Header="Update Item"></MenuItem>
             <Separator/>
@@ -62,9 +149,39 @@
             <Separator/>
             <MenuItem x:Name="MenuItemCopyItemID" Header="Copy Item ID"></MenuItem>
         </ContextMenu>
+
+        <!--<ContextMenu x:Key="TopBarRightClickMenu" x:Name="TopBarRightClickMenu">
+            <MenuItem x:Name="MenuItemReset" Header="Reset" Click="ButtonResize_Click">
+                <MenuItem.Icon>
+                    <Image Source="Images/TopBar Right Click Menu/TopBar Right Click Menu Resize.png" Stretch="None"></Image>
+                </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem x:Name="MenuItemMove" Header="Move"></MenuItem>
+            <MenuItem x:Name="MenuItemResize" Header="Resize"/>
+            <MenuItem x:Name="MenuItemMinimize" Header="Minimize" Click="ButtonMinimize_Click">
+                <MenuItem.Icon>
+                    <Image Source="Images/TopBar Right Click Menu/TopBar Right Click Menu Minimize.png" Stretch="None"></Image>
+                </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem x:Name="MenuItemMaximize" Header="Maximize" Click="ButtonResize_Click">
+                <MenuItem.Icon>
+                    <Image Source="Images/TopBar Right Click Menu/TopBar Right Click Menu Fullscreen.png" Stretch="None"></Image>
+                </MenuItem.Icon>
+            </MenuItem>
+            <Separator/>
+            <MenuItem x:Name="MenuItemProgramClose" Header="Close" Click="MenuItemProgramClose_Click">
+                <MenuItem.InputBindings>
+                    <KeyBinding Modifiers="Alt"
+                    Key="F4" />
+                </MenuItem.InputBindings>
+                <MenuItem.Icon>
+                    <Image Source="Images/TopBar Right Click Menu/TopBar Right Click Menu Close.png" Stretch="None"></Image>
+                </MenuItem.Icon>
+            </MenuItem>
+        </ContextMenu>-->
     </Window.Resources>
     <Grid x:Name="GridBack" Background="#FFEAEAEA">
-        <Grid Margin="0,60,0,0">
+        <Grid Margin="0,67,0,0">
             <Grid x:Name="GridFront" Margin="30,15,30,30" >
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="25*" MinWidth="200"></ColumnDefinition>
@@ -72,125 +189,177 @@
                     <ColumnDefinition Width="25*" MinWidth="200"></ColumnDefinition>
                 </Grid.ColumnDefinitions>
                 <Grid x:Name="GridFrontLeft" Grid.Column="0" Background="#FFFBFBFB" Margin="0,0,5,0">
-                    <Button x:Name="ButtonOpenTextReversed" Content="Open Selected Text Reversed" Grid.Column="0" Margin="16,92,0,0" VerticalAlignment="Top" HorizontalAlignment="Left" Width="160" Height="23" Click="ButtonOpenTextReversed_Click"></Button>
-                    <Button x:Name="ButtonSelectAllDataLengthLocations" Content="Select All Item Data Length Locations" Grid.Column="0" Margin="16,64,0,0" VerticalAlignment="Top" HorizontalAlignment="Left" Width="204" Height="23" Click="ButtonSelectAllDataLengthLocations_Click"></Button>
-                    <Button x:Name="ButtonFindPreviousMatchInFileContent" Content="Find Previous" Grid.Column="0" Margin="0,37,67,0" VerticalAlignment="Top" Height="20" HorizontalAlignment="Right" Width="75" Click="ButtonFindPreviousMatchInFileContent_Click"/>
-                    <Button x:Name="ButtonFindNextMatchInFileContent" Content="Find Next" Grid.Column="0" Margin="0,37,5,0" VerticalAlignment="Top" Height="20" Click="ButtonFindNextMatchInFileContent_Click" HorizontalAlignment="Right" Width="57"/>
-                    <TextBox x:Name="TextBoxFileContentSearchBar" Grid.Column="0" Height="20" TextWrapping="Wrap" VerticalAlignment="Top" AutomationProperties.HelpText="Search in items" Margin="16,37,147,0" BorderBrush="#FFC3C3C3" TextChanged="TextBoxFileContentSearchBar_TextChanged"/>
-                    <Label Content="File Content" Margin="10,120,0,0" Grid.Column="0" Height="26" VerticalAlignment="Top" HorizontalAlignment="Left" Width="80"></Label>
-                    <scintilla:ScintillaWPF x:Name="scintillaTextBox" Margin="15,146,10,30" Grid.Column="0" WrapMode="Char" ReadOnly="True" BorderStyle="FixedSingle" Lexer="Xml"/>
+                    <Button x:Name="ButtonOpenText" Margin="0,130,11,0" VerticalAlignment="Top" Height="23" Click="ButtonOpenText_Click" Background="#FFF1F1F1" HorizontalAlignment="Right" Width="124">
+                        <StackPanel Orientation="Horizontal" Width="116" Height="16">
+                            <Image Source="Images/Document Small.png" Margin="0,0,3,0" Width="12" Height="12" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="NearestNeighbor" UseLayoutRounding="True"/>
+                            <TextBlock Text="Open Selected Text" VerticalAlignment="Center"></TextBlock>
+                        </StackPanel>
+                    </Button>
+                    <Button x:Name="ButtonSelectAllDataLengthLocations" Content="Select All Item Data Length Locations" Grid.Column="0" Margin="183,97,0,0" VerticalAlignment="Top" HorizontalAlignment="Left" Width="204" Height="23" Click="ButtonSelectAllDataLengthLocations_Click" Visibility="Hidden"/>
+                    <Button x:Name="ButtonFindPreviousMatchInFileContent" Grid.Column="0" Margin="0,105,32,0" VerticalAlignment="Top" Width="20" Height="20" HorizontalAlignment="Right" Click="ButtonFindPreviousMatchInFileContent_Click" AutomationProperties.HelpText="Find Previous">
+                        <Image Source="Images/Arrow Former.png" Width="12" Height="12"></Image>
+                    </Button>
+                    <Button x:Name="ButtonFindNextMatchInFileContent" Grid.Column="0" Margin="0,105,11,0" VerticalAlignment="Top" Width="20" Height="20" Click="ButtonFindNextMatchInFileContent_Click" HorizontalAlignment="Right" AutomationProperties.HelpText="Find Next">
+                        <Image Source="Images/Arrow Next.png" Width="12" Height="12"></Image>
+                    </Button>
+                    <TextBox x:Name="TextBoxFileContentSearchBar" Grid.Column="0" Height="20" TextWrapping="Wrap" VerticalAlignment="Top" AutomationProperties.HelpText="Search in items" Margin="15,105,53,0" BorderBrush="#FFC3C3C3" TextChanged="TextBoxFileContentSearchBar_TextChanged"/>
+                    <Label Content="File Content" Margin="10,130,0,0" Grid.Column="0" Height="26" VerticalAlignment="Top" HorizontalAlignment="Left" Width="80"></Label>
+                    <scintilla:ScintillaWPF x:Name="scintillaTextBox" Margin="15,156,10,30" Grid.Column="0" WrapMode="Char" ReadOnly="True" BorderStyle="FixedSingle" Lexer="Properties" Technology="DirectWrite"/>
                 </Grid>
                 <GridSplitter x:Name="GridSplitterLeft" Grid.Column="1" HorizontalAlignment="Left" Width="10" BorderBrush="#FFF0F0F0" BorderThickness="0" Margin="-5,0,0,0" Background="#00000000"/>
                 <Grid x:Name="GridFrontMiddle" Grid.Column="1" Background="#FFFBFBFB" Margin="5,0">
-                    <GroupBox x:Name="GroupBoxItemSearchOptions" Grid.Column="1" VerticalAlignment="Top" HorizontalAlignment="Left" Width="409" Height="68" Margin="15,0,0,0" Header="Item Search Options" SnapsToDevicePixels="True">
+                    <GroupBox x:Name="GroupBoxItemSearchOptions" VerticalAlignment="Top" HorizontalAlignment="Left" Width="409" Height="68" Margin="11,2,0,0" Header="Item Search Options" SnapsToDevicePixels="True">
                         <Grid Grid.Column="1" Margin="-15,-8,0,0">
-                            <CheckBox x:Name="CheckBoxShowItemsWithBadChars" Content="Show items with bad chars" Grid.Column="1" HorizontalAlignment="Left" Margin="14,7,0,0" VerticalAlignment="Top" Click="CheckBoxShowItemsWithBadCharsOnly_Click"/>
-                            <CheckBox x:Name="CheckBoxShowItemsWithUnusualChars" Content="Show items with unusual chars" Grid.Column="1" HorizontalAlignment="Left" Margin="14,22,0,0" VerticalAlignment="Top" Click="CheckBoxShowItemsWithUnusualCharsOnly_Click"/>
-                            <CheckBox x:Name="CheckBoxShowItemsWithoutDescriptions" Content="Show items without descriptions" Grid.Column="1" HorizontalAlignment="Left" Margin="213,7,0,0" VerticalAlignment="Top" Click="CheckBoxShowItemsWithoutDescriptionsOnly_Click"/>
-                            <CheckBox x:Name="CheckBoxShowItemsWithSameIDs" Content="Show items with same IDs" Grid.Column="1" HorizontalAlignment="Left" Margin="252,37,0,0" VerticalAlignment="Top" Click="CheckBoxShowItemsWithBadCharsOnly_Click"/>
-                            <CheckBox x:Name="CheckBoxShowItemsWithNoMatch" Content="Show items with no matching IDs" Grid.Column="1" HorizontalAlignment="Left" Margin="213,22,0,0" VerticalAlignment="Top" Click="CheckBoxShowItemsWithNoMatch_Click" />
-                            <CheckBox x:Name="CheckBoxShowItemsWithoutFirstCharLetter" Content="Show items that don't start with a letter" Grid.Column="1" HorizontalAlignment="Left" Margin="14,37,0,0" VerticalAlignment="Top" Click="CheckBoxShowItemsWithoutFirstCharLetter_Click" />
+                            <CheckBox x:Name="CheckBoxShowItemsWithBadChars" Content="Show items with bad chars" HorizontalAlignment="Left" Margin="14,8,0,0" VerticalAlignment="Top" Click="CheckBoxShowItemsWithBadCharsOnly_Click"/>
+                            <CheckBox x:Name="CheckBoxShowItemsWithUnusualChars" Content="Show items with unusual chars" HorizontalAlignment="Left" Margin="14,23,0,0" VerticalAlignment="Top" Click="CheckBoxShowItemsWithUnusualCharsOnly_Click"/>
+                            <CheckBox x:Name="CheckBoxShowItemsWithoutDescriptions" Content="Show items without descriptions" HorizontalAlignment="Left" Margin="213,8,0,0" VerticalAlignment="Top" Click="CheckBoxShowItemsWithoutDescriptionsOnly_Click"/>
+                            <CheckBox x:Name="CheckBoxShowItemsWithSameIDs" Content="Show items with same IDs" HorizontalAlignment="Left" Margin="252,38,0,-1" VerticalAlignment="Top" Click="CheckBoxShowItemsWithBadCharsOnly_Click"/>
+                            <CheckBox x:Name="CheckBoxShowItemsWithNoMatch" Content="Show items with no matching IDs" HorizontalAlignment="Left" Margin="213,23,0,0" VerticalAlignment="Top" Click="CheckBoxShowItemsWithNoMatch_Click" />
+                            <CheckBox x:Name="CheckBoxShowItemsWithoutFirstCharLetter" Content="Show items that don't start with a letter" HorizontalAlignment="Left" Margin="14,38,0,-1" VerticalAlignment="Top" Click="CheckBoxShowItemsWithoutFirstCharLetter_Click" />
                         </Grid>
                     </GroupBox>
-                    <GroupBox x:Name="GroupBoxItem" Width="460" Height="65" VerticalAlignment="Top" Margin="15,62,0,0" Header="Item" HorizontalAlignment="Left" SnapsToDevicePixels="True">
+                    <GroupBox x:Name="GroupBoxItem" Width="460" Height="65" VerticalAlignment="Top" Margin="11,68,0,0" Header="Selected Item Options" HorizontalAlignment="Left" SnapsToDevicePixels="True">
                         <Grid Margin="-5,-5,0,0">
-                            <Button x:Name="ButtonUpdateItemBasedOnNameLength" Content="Update Item" HorizontalAlignment="Left" Margin="4,3,0,0" VerticalAlignment="Top" Width="71" Click="ButtonUpdateItemBasedOnNameLength_Click"/>
-                            <Button x:Name="ButtonJumpToWhole" Content="Jump to Whole" HorizontalAlignment="Left" Margin="80,3,0,0" VerticalAlignment="Top" Width="84" Click="ButtonJumpToWholeItem_Click"/>
-                            <Button x:Name="ButtonJumpToID" Content="Jump to ID" HorizontalAlignment="Left" Margin="169,3,0,0" VerticalAlignment="Top" Width="75" Click="ButtonJumpToID_Click"/>
-                            <Button x:Name="ButtonJumpToName" Content="Jump to Name" HorizontalAlignment="Left" Margin="249,3,0,0" VerticalAlignment="Top" Width="87" Click="ButtonJumpToName_Click"/>
-                            <Button x:Name="ButtonJumpToDescription" Content="Jump to Description" HorizontalAlignment="Left" Margin="341,3,0,0" VerticalAlignment="Top" Width="112" Click="ButtonJumpToDescription_Click"/>
-                            <Button x:Name="ButtonJumpToExtra1" Content="Jump to Extra 1" HorizontalAlignment="Left" Margin="119,28,0,-1" VerticalAlignment="Top" Width="86" Click="ButtonJumpToExtra1_Click" IsEnabled="False" Visibility="Hidden"/>
-                            <Button x:Name="ButtonJumpToExtra2" Content="Jump to Extra 2" HorizontalAlignment="Left" Margin="210,28,0,-1" VerticalAlignment="Top" Width="86" Click="ButtonJumpToExtra2_Click" IsEnabled="False" Visibility="Hidden"/>
-                            <Button x:Name="ButtonOpenItemInfo" Margin="4,28,0,-8" VerticalAlignment="Top" Height="20" Click="ButtonOpenItemInfo_Click" HorizontalAlignment="Left" Width="110">
+                            <Button x:Name="ButtonUpdateItemBasedOnNameLength" Content="Update Item" Padding="0,0,0,2" HorizontalAlignment="Left" Margin="4,6,0,0" VerticalAlignment="Top" Width="71" Click="ButtonUpdateItemBasedOnNameLength_Click"/>
+                            <Button x:Name="ButtonJumpToWhole" Content="Jump to Whole" Padding="0,0,0,2" HorizontalAlignment="Left" Margin="80,6,0,0" VerticalAlignment="Top" Width="84" Click="ButtonJumpToWholeItem_Click"/>
+                            <Button x:Name="ButtonJumpToID" Content="Jump to ID" Padding="0,0,0,2" HorizontalAlignment="Left" Margin="169,6,0,0" VerticalAlignment="Top" Width="75" Click="ButtonJumpToID_Click"/>
+                            <Button x:Name="ButtonJumpToName" Content="Jump to Name" Padding="0,0,0,2" HorizontalAlignment="Left" Margin="249,6,0,0" VerticalAlignment="Top" Width="87" Click="ButtonJumpToName_Click"/>
+                            <Button x:Name="ButtonJumpToDescription" Content="Jump to Description" Padding="0,0,0,2" HorizontalAlignment="Left" Margin="4,28,0,-1" VerticalAlignment="Top" Width="112" Click="ButtonJumpToDescription_Click"/>
+                            <Button x:Name="ButtonJumpToExtra1" Content="Jump to Extra 1" Padding="0,0,0,2" HorizontalAlignment="Left" Margin="121,28,0,-1" VerticalAlignment="Top" Width="86" Click="ButtonJumpToExtra1_Click" IsEnabled="False" Visibility="Hidden"/>
+                            <Button x:Name="ButtonJumpToExtra2" Content="Jump to Extra 2" Padding="0,0,0,2" HorizontalAlignment="Left" Margin="212,28,0,-1" VerticalAlignment="Top" Width="86" Click="ButtonJumpToExtra2_Click" IsEnabled="False" Visibility="Hidden"/>
+                            <Button x:Name="ButtonOpenItemInfo" Margin="341,6,0,0" VerticalAlignment="Top" Width="110" Height="20" Click="ButtonOpenItemInfo_Click" HorizontalAlignment="Left">
                                 <StackPanel Orientation="Horizontal">
-                                    <Image Source="Images/Information.png" Margin="2" Stretch="Fill"/>
-                                    <TextBlock><Run Text="Open Item Info"/></TextBlock>
+                                    <Image Source="Images/Document Small.png" Margin="0,0,3,0" Width="12" Height="12" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="NearestNeighbor"/>
+                                    <TextBlock Text="Open Item Info" VerticalAlignment="Center" Padding="0,0,0,2"/>
                                 </StackPanel>
                             </Button>
                         </Grid>
                     </GroupBox>
-                    <Label x:Name="LabelFoundItems" Content="Found Items" HorizontalAlignment="Left" VerticalAlignment="Top" Grid.Column="1" Margin="10,120,0,0" Height="26" Width="76"/>
-                    <ListBox x:Name="ListBoxFoundItems" Margin="10,146,10,30" Grid.Column="1" FontFamily="Courier New"/>
-                    <Button x:Name="ButtonTransferAllItemsToStoredItems" Margin="0,74,10,0" VerticalAlignment="Top" Height="23" Click="ButtonTransferAllItemsToStoredItems_Click" HorizontalContentAlignment="Left" HorizontalAlignment="Right" Width="137">
+                    <Label x:Name="LabelFoundItems" Content="Found Items" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,130,0,0" Height="26" Width="76"/>
+                    <ListBox x:Name="ListBoxFoundItems" VirtualizingStackPanel.IsVirtualizing="True" VirtualizingStackPanel.VirtualizationMode="Standard" Margin="10,156,10,30" FontFamily="Courier New"/>
+                    <Button x:Name="ButtonTransferAllItemsToStoredItems" Margin="0,80,10,0" VerticalAlignment="Top" Height="23" Click="ButtonTransferAllItemsToStoredItems_Click" HorizontalContentAlignment="Left" HorizontalAlignment="Right" Width="137">
                         <StackPanel Orientation="Horizontal">
                             <Image Source="Images/Store all Items.png" Stretch="Fill" Margin="5,3,3,3"/>
                             <TextBlock>Store all Items</TextBlock>
                         </StackPanel>
                     </Button>
-                    <Button x:Name="ButtonTransferSelectedItemsToStoredItems" Margin="0,102,10,0" VerticalAlignment="Top" Height="23" HorizontalContentAlignment="Left" Click="ButtonTransferSelectedItemsToStoredItems_Click" HorizontalAlignment="Right" Width="137">
+                    <Button x:Name="ButtonTransferSelectedItemsToStoredItems" Margin="0,108,10,0" VerticalAlignment="Top" Height="23" HorizontalContentAlignment="Left" Click="ButtonTransferSelectedItemsToStoredItems_Click" HorizontalAlignment="Right" Width="137">
                         <StackPanel Orientation="Horizontal">
                             <Image Source="Images/Store all Items.png" Stretch="Fill" Margin="5,3,3,3"/>
-                            <TextBlock><Run Text="Store Selected Items"/></TextBlock>
+                            <TextBlock><Run Text="Store Selected Item"/></TextBlock>
                         </StackPanel>
                     </Button>
                 </Grid>
                 <GridSplitter x:Name="GridSplitterRight" Grid.Column="2" HorizontalAlignment="Left" Width="10" BorderBrush="#FFF0F0F0" BorderThickness="0" Margin="-5,0,0,0" Background="#00000000"></GridSplitter>
                 <Grid x:Name="GridFrontRight" Grid.Column="2" Background="#FFFBFBFB" Margin="5,0,0,0">
-                    <Label x:Name="LabelStoredItems" Content="Stored Items" Margin="5,120,0,0" VerticalAlignment="Top" Grid.Column="2" Height="26" HorizontalAlignment="Left" Width="92"/>
-                    <ListBox x:Name="ListBoxStoredItems" Margin="10,146,15,30" Grid.Column="2" FontFamily="Courier New" KeyDown="ListBoxStoredItems_KeyDown"/>
-                    <!--<Button x:Name="ButtonAddNewStoredItem" Grid.Column="2" Margin="10,64,0,0" VerticalAlignment="Top" Width="138" Height="23" HorizontalAlignment="Left" HorizontalContentAlignment="Left" Click="ButtonAddNewStoredItem_Click">
+                    <Label x:Name="LabelStoredItems" Content="Stored Items" Margin="5,130,0,0" VerticalAlignment="Top" Height="26" HorizontalAlignment="Left" Width="92"/>
+                    <ListBox x:Name="ListBoxStoredItems" VirtualizingStackPanel.IsVirtualizing="True" VirtualizingStackPanel.VirtualizationMode="Standard" Margin="10,156,15,30" FontFamily="Courier New" KeyDown="ListBoxStoredItems_KeyDown"/>
+                    <Button x:Name="ButtonClearStoredItems" Margin="10,108,0,0" VerticalAlignment="Top" Height="23" Click="ButtonClearStoredItems_Click" HorizontalAlignment="Left" Width="138" HorizontalContentAlignment="Left">
                         <StackPanel Orientation="Horizontal">
-                            <Image Source="Images/Store all Items.png" Stretch="Fill" Margin="3"/>
-                            <TextBlock>Add New Stored Item</TextBlock>
-                        </StackPanel>
-                    </Button>-->
-                    <Button x:Name="ButtonClearStoredItems" Margin="10,102,0,0" VerticalAlignment="Top" Height="23" Click="ButtonClearStoredItems_Click" HorizontalAlignment="Left" Width="138" HorizontalContentAlignment="Left">
-                        <StackPanel Orientation="Horizontal">
-                            <Image Source="Images/Clear all Items 2.png" Stretch="Fill" Margin="3"/>
+                            <Image Source="Images/Clear all Items.png" Stretch="Fill" Margin="3"/>
                             <TextBlock>Clear Stored Items</TextBlock>
                         </StackPanel>
                     </Button>
                 </Grid>
             </Grid>
-            <Label x:Name="LabelSaved" Content="" Grid.Column="0" HorizontalAlignment="Left" Height="26" VerticalAlignment="Bottom"/>
+            <Label x:Name="LabelReportInfo" Content="" Grid.Column="0" HorizontalAlignment="Left" Height="26" VerticalAlignment="Bottom" Margin="16,0,0,4"/>
         </Grid>
-        <Menu x:Name="MenuMain" Height="25" VerticalAlignment="Top" BorderBrush="#FFB9B9B9" BorderThickness="0" Background="WhiteSmoke">
-            <MenuItem Header="File">
-                <MenuItem x:Name="MenuItemOpen" Header="Open" Click="MenuItemOpen_Click"/>
+        <Menu x:Name="MenuMain" Height="67" VerticalAlignment="Top" BorderBrush="#FFB9B9B9" BorderThickness="0" Background="WhiteSmoke" PreviewMouseDoubleClick="MenuMain_PreviewMouseDoubleClick" PreviewMouseMove="MenuMain_PreviewMouseMove" PreviewMouseRightButtonUp="MenuMain_PreviewMouseRightButtonUp">
+            <MenuItem Header="File" Height="24" Margin="48,7,0,0" WindowChrome.IsHitTestVisibleInChrome="True">
+                <MenuItem x:Name="MenuItemOpen" Header="Open" Click="MenuItemOpen_Click">
+                    <MenuItem.Icon>
+                        <Image Source="Images/Open.png"/>
+                    </MenuItem.Icon>
+                </MenuItem>
                 <Separator/>
                 <MenuItem x:Name="MenuItemClose" Header="Close" Click="MenuItemClose_Click" ></MenuItem>
                 <Separator/>
-                <MenuItem x:Name="MenuItemSave" Header="Save" Click="MenuItemSave_Click"/>
+                <MenuItem x:Name="MenuItemSave" Header="Save" Click="MenuItemSave_Click">
+                    <MenuItem.Icon>
+                        <Image Source="Images/Save.png"/>
+                    </MenuItem.Icon>
+                </MenuItem>
                 <!--<MenuItem x:Name="MenuItemSaveAs" Header="Save As..." Click="MenuItemSave_Click"/>-->
                 <Separator/>
                 <MenuItem x:Name="MenuItemExportFile" Header="Export File" Click="MenuItemExportFile_Click"/>
                 <Separator/>
                 <MenuItem x:Name="MenuItemExit" Header="Exit" Click="MenuItemExit_Click"/>
             </MenuItem>
-            <MenuItem x:Name="MenuItemEdit" Header="Edit">
+            <MenuItem x:Name="MenuItemEdit" Header="Edit" Height="24" Margin="0,7,0,0" WindowChrome.IsHitTestVisibleInChrome="True">
                 <MenuItem x:Name="MenuItemSettings" Header="Settings" Click="MenuItemSettings_Click"></MenuItem>
             </MenuItem>
-            <MenuItem Header="Help">
+            <MenuItem Header="Help" Height="24" Margin="0,7,0,0" WindowChrome.IsHitTestVisibleInChrome="True">
                 <MenuItem x:Name="MenuItemAbout" Header="About WLO Translator" Click="MenuItemAbout_Click"></MenuItem>
             </MenuItem>
         </Menu>
-        <ToolBar x:Name="ToolBarMain" Height="35" Margin="0,25,0,0" VerticalAlignment="Top" Background="#FFF3F3F3">
-            <Button x:Name="ButtonOpenFileToTranslate" Content="Open File" HorizontalAlignment="Left" Margin="0,4,0,0" VerticalAlignment="Top" Width="64" Height="23" Click="ButtonOpenFileToTranslate_Click" Foreground="Black"/>
-            <ComboBox x:Name="ComboBoxSelectedEncoding" Margin="0,5" Width="155" SelectedIndex="0" SelectionChanged="ComboBoxSelectedEncoding_SelectionChanged">
-                <ComboBox.Background>
-                    <LinearGradientBrush EndPoint="0,1" StartPoint="0,0">
-                        <GradientStop Color="#FFF0F0F0" Offset="0"/>
-                        <GradientStop Color="White" Offset="1"/>
-                    </LinearGradientBrush>
-                </ComboBox.Background>
+        <Grid x:Name="GridBackgroundProjectFileName" Height="22" VerticalAlignment="Top" Margin="160,9,0,0" Background="#FFFBFBFB" HorizontalAlignment="Left" Visibility="Hidden">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="0" x:Name="ProjectFileName" Text="" Height="17" Foreground="#FF4D4C4C" Margin="8,2"/>
+        </Grid>
+        <Image x:Name="ImageProgramIcon" Source="Images/Translate Larger Icon.png" Margin="16,6,0,0" Width="30" Height="29" HorizontalAlignment="Left" VerticalAlignment="Top" MouseRightButtonUp="ImageProgramIcon_MouseRightButtonUp" MouseLeftButtonDown="ImageProgramIcon_MouseLeftButtonDown"/>
+        <ToolBar x:Name="ToolBarMain" Height="35" Margin="10,32,0,0" VerticalAlignment="Top" Background="#FFF3F3F3" HorizontalAlignment="Left" Width="793" WindowChrome.IsHitTestVisibleInChrome="True">
+            <Button x:Name="ButtonOpenFileToTranslate" HorizontalAlignment="Left" Margin="0,4,0,0" VerticalAlignment="Top" Height="23" Click="ButtonOpenFileToTranslate_Click" Foreground="Black">
+                <Button.Content>
+                    <StackPanel Orientation="Horizontal">
+                        <Image Source="Images/Open.png"/>
+                    </StackPanel>
+                </Button.Content>
+            </Button>
+            <Button x:Name="ButtonSaveStoredItems" HorizontalAlignment="Left" Margin="0,4,0,0" VerticalAlignment="Top" Height="23" Click="MenuItemSave_Click" Foreground="Black">
+                <Button.Content>
+                    <StackPanel Orientation="Horizontal">
+                        <Image Source="Images/Save.png"/>
+                    </StackPanel>
+                </Button.Content>
+            </Button>
+            <Separator/>
+            <ComboBox x:Name="ComboBoxSelectedEncoding" Margin="0,5" Width="155" SelectedIndex="0" SelectionChanged="ComboBoxSelectedEncoding_SelectionChanged" Background="White">
+                <ComboBox.Resources>
+                    <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}">Transparent</SolidColorBrush>
+                    <!--<SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}">Red</SolidColorBrush>-->
+                </ComboBox.Resources>
                 <ComboBoxItem Content="ANSI"/>
                 <ComboBoxItem Content="Unicode"/>
                 <ComboBoxItem Content="UTF8"/>
                 <ComboBoxItem Content="GB2312"/>
                 <ComboBoxItem Content="BIG5"/>
             </ComboBox>
+            <Separator/>
             <Button x:Name="ButtonBeginTranslate" Click="ButtonBeginTranslate_Click">
                 <StackPanel Orientation="Horizontal">
                     <Image Source="Images/Translate Larger Icon.png" Stretch="Fill" Margin="1"/>
-                    <TextBlock VerticalAlignment="Center">Translate</TextBlock>
+                    <TextBlock VerticalAlignment="Center" Margin="3,0,0,0">Translate</TextBlock>
                 </StackPanel>
             </Button>
+            <Separator/>
             <TextBox x:Name="TextBoxItemSearchBar" Height="20" TextWrapping="Wrap" VerticalAlignment="Top" Width="184" AutomationProperties.HelpText="Search in items" TextChanged="TextBoxItemSearchBar_TextChanged" Margin="0,5,0,0" BorderBrush="#FFC3C3C3"/>
             <ComboBox x:Name="ComboBoxSearchOption" Margin="5,5,0,5" Width="118" SelectedIndex="0" SelectionChanged="ComboBoxSearchOption_SelectionChanged">
+                <ComboBox.Resources>
+                    <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}">Transparent</SolidColorBrush>
+                    <!--<SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}">Red</SolidColorBrush>-->
+                </ComboBox.Resources>
                 <ComboBoxItem x:Name="ComboBoxItemFoundItemsName" Content="Found Item Name"/>
                 <ComboBoxItem x:Name="ComboBoxItemStoredItemsName" Content="Stored Item Name"/>
                 <ComboBoxItem x:Name="ComboBoxItemItemsID" Content="Item ID"/>
             </ComboBox>
+            <Separator/>
+            <Button x:Name="ButtonOpenMultiTranslator" Click="ButtonOpenMultiTranslator_Click">
+                <StackPanel Orientation="Horizontal">
+                    <Image Source="Images/Translate Larger Icon.png" Stretch="Fill" Margin="1"/>
+                    <TextBlock VerticalAlignment="Center" Margin="3,0,0,0">Open Multi Translator</TextBlock>
+                </StackPanel>
+            </Button>
         </ToolBar>
+        <Button x:Name="ButtonMinimize" Margin="0,0,92,0" VerticalAlignment="Top" HorizontalAlignment="Right" Background="{x:Null}" BorderBrush="{x:Null}" BorderThickness="0" Padding="0" Click="ButtonMinimize_Click" WindowChrome.IsHitTestVisibleInChrome="True">
+            <Image Source="{StaticResource Button Minimize}" Stretch="None"/>
+        </Button>
+        <Button x:Name="ButtonResize" Margin="0,0,46,0" VerticalAlignment="Top" HorizontalAlignment="Right" Background="{x:Null}" BorderBrush="{x:Null}" BorderThickness="0" Padding="0" Click="ButtonResize_Click" WindowChrome.IsHitTestVisibleInChrome="True">
+            <Image Source="{StaticResource Button Resize Not Fullscreen}" Stretch="None"/>
+        </Button>
+        <Button x:Name="ButtonClose" VerticalAlignment="Top" HorizontalAlignment="Right" Background="{x:Null}" BorderBrush="{x:Null}" BorderThickness="0" Padding="0" Click="ButtonClose_Click" WindowChrome.IsHitTestVisibleInChrome="True">
+            <Image Source="{StaticResource Button Close}" Stretch="None"/>
+        </Button>
     </Grid>
 </Window>

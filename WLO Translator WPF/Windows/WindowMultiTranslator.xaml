@@ -1,0 +1,99 @@
+﻿<Window x:Name="MultiTranslatorWindow" x:Class="WLO_Translator_WPF.WindowMultiTranslator"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:WLO_Translator_WPF"
+        mc:Ignorable="d"
+        Title="Multi Translator" Height="563" Width="1001" Icon="/WLO Translator WPF;component/Images/Translate.png">
+    <Window.Resources>
+        <!--<Style x:Key="TreeViewItemDontHighlight" TargetType="{x:Type TreeViewItem}">
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="Transparent"/>
+                    <Setter Property="BorderBrush" Value="Transparent"/>
+                </Trigger>
+            </Style.Triggers>
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>-->
+        <ControlTemplate x:Key="NoMouseOverTreeViewItemTemplate"   
+                 TargetType="TreeViewItem">
+            <Border Background="{TemplateBinding Background}"  
+          BorderBrush="{TemplateBinding BorderBrush}"  
+          BorderThickness="{TemplateBinding BorderThickness}">
+                <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"  
+                      VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+            </Border>
+
+            <ControlTemplate.Triggers>
+                <Trigger Property="IsEnabled"  
+             Value="False">
+                    <Setter Property="Background"  
+              Value="{x:Static SystemColors.ControlLightBrush}" />
+                    <Setter Property="Foreground"  
+              Value="{x:Static SystemColors.GrayTextBrush}" />
+                </Trigger>
+            </ControlTemplate.Triggers>
+        </ControlTemplate>
+    </Window.Resources>
+    <Grid Background="#FFDEDEDE">
+        <Grid Margin="10,10,10,47" Background="WhiteSmoke">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition MinWidth="100"/>
+                <ColumnDefinition MinWidth="100"/>
+            </Grid.ColumnDefinitions>
+            <Grid Grid.Column="0">
+                <Grid.RowDefinitions>
+                    <RowDefinition MinHeight="100"/>
+                    <RowDefinition MinHeight="100"/>
+                </Grid.RowDefinitions>
+                <Grid Grid.Row="0">
+                    <Label Content="Files" VerticalAlignment="Top" HorizontalAlignment="Left" Margin="3,7,0,0"/>
+                    <CheckBox x:Name="CheckBoxFilesSelectAll" Content="Select All" HorizontalAlignment="Left" Margin="7,33,0,0" VerticalAlignment="Top" Click="CheckBoxFilesSelectAll_Click" IsChecked="True"/>
+                    <ListBox x:Name="ListBoxFiles" Margin="0,53,4,4" BorderBrush="White"/>
+                </Grid>
+                <GridSplitter Grid.Row="0" HorizontalAlignment="Stretch" VerticalAlignment="Bottom" Height="8" Margin="0,0,0,-4" Background="#FFDEDEDE"/>
+                <Grid Grid.Row="1">
+                    <Label Content="Unstored Items" VerticalAlignment="Top" HorizontalAlignment="Left" Margin="3,0,0,0"/>
+                    <CheckBox x:Name="CheckBoxUnstoredItemsSelectAll" Content="Select All" HorizontalAlignment="Left" Margin="7,23,0,0" VerticalAlignment="Top" Click="CheckBoxUnstoredItemsSelectAll_Click" IsChecked="True"/>
+                    <TreeView x:Name="TreeViewUnstoredItems" Margin="0,43,4,47" ScrollViewer.CanContentScroll="False" Background="White" ScrollViewer.HorizontalScrollBarVisibility="Auto" BorderBrush="White"/>
+                    <Button x:Name="ButtonTranslateSelected" HorizontalAlignment="Left" Margin="10,0,0,10" Width="129" Height="28" VerticalAlignment="Bottom" Click="ButtonTranslateSelected_Click" Background="#FFF1F1F1">
+                        <StackPanel Orientation="Horizontal">
+                            <Image Source="/WLO Translator WPF;component/Images/Translate.png" Width="24" Height="24" />
+                            <TextBlock Text="Translate Selected" VerticalAlignment="Center"></TextBlock>
+                        </StackPanel>
+                    </Button>
+                    <Button x:Name="ButtonStoreItems" HorizontalAlignment="Left" Margin="144,0,0,10" Height="28" VerticalAlignment="Bottom" Click="ButtonStoreItems_Click" Background="#FFF1F1F1">
+                        <StackPanel Orientation="Horizontal">
+                            <Image Source="/WLO Translator WPF;component/Images/Store all Items.png" Width="16" Height="16" Margin="5,0,5,0" />
+                            <TextBlock Text="Store Selected Unstored Items" VerticalAlignment="Center" Padding="0,0,5,0"></TextBlock>
+                        </StackPanel>
+                    </Button>
+                </Grid>
+            </Grid>
+            <GridSplitter Grid.Column="0" HorizontalAlignment="Right" Margin="0,0,-4,0" VerticalAlignment="Stretch" Background="#FFDEDEDE" Width="8"/>
+            <Grid Grid.Column="1">
+                <Label Content="Translated Files" VerticalAlignment="Top" HorizontalAlignment="Left" Margin="7,7,0,0"/>
+                <CheckBox x:Name="CheckBoxTranslatedFilesSelectAll" Content="Select All" HorizontalAlignment="Left" Margin="11,33,0,0" VerticalAlignment="Top" Click="CheckBoxTranslatedFilesSelectAll_Click" IsChecked="True"/>
+                <ListBox x:Name="ListBoxTranslatedFiles" Margin="4,53,0,47" BorderBrush="White"/>
+            </Grid>
+            <Button x:Name="ButtonExportSelectedFiles" Grid.Column="1" HorizontalAlignment="Left" Margin="10,0,0,10" Width="129" Height="28" VerticalAlignment="Bottom" Click="ButtonExportSelectedFiles_Click" Background="#FFF1F1F1">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Export Selected Files" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+        </Grid>
+        <TextBlock x:Name="TextBlockReportInfo" Margin="20,0,0,16" HorizontalAlignment="Left" VerticalAlignment="Bottom"/>
+        <Button x:Name="ButtonOK" Margin="0,0,96,10" Height="28" VerticalAlignment="Bottom" IsDefault="True" HorizontalAlignment="Right" Width="81" Click="ButtonOK_Click" Background="#FFF1F1F1">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="OK" VerticalAlignment="Center"/>
+            </StackPanel>
+        </Button>
+        <Button x:Name="ButtonCancel" Margin="0,0,10,10" Height="28" VerticalAlignment="Bottom" IsCancel="True" HorizontalAlignment="Right" Width="81" Click="ButtonCancel_Click" Background="#FFF1F1F1">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="Cancel" VerticalAlignment="Center"/>
+            </StackPanel>
+        </Button>
+    </Grid>
+</Window>

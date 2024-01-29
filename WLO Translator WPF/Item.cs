@@ -1,11 +1,36 @@
-﻿using System.Text;
+﻿using System;
+using System.Linq;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Media;
 
 namespace WLO_Translator_WPF
 {
-    public class ItemData
+    public interface IItemBase
+    {
+        string  Name                        { get; set; }
+        int[]   ID                          { get; set; }
+        string  Description                 { get; set; }
+        string  Extra1                      { get; set; }
+        string  Extra2                      { get; set; }
+        int     ItemStartPosition           { get; set; }
+        int     ItemEndPosition             { get; set; }
+        int     IDStartPosition             { get; set; }
+        int     IDEndPosition               { get; set; }
+        int     NameStartPosition           { get; set; }
+        int     NameEndPosition             { get; set; }
+        int     DescriptionStartPosition    { get; set; }
+        int     DescriptionEndPosition      { get; set; }
+        int     Extra1StartPosition         { get; set; }
+        int     Extra1EndPosition           { get; set; }
+        int     Extra2StartPosition         { get; set; }
+        int     Extra2EndPosition           { get; set; }
+        int     GetIDValue();
+    }
+
+    public class ItemData : IItemBase
     {
         private string mName;
         private string mNameReversed;
@@ -15,9 +40,9 @@ namespace WLO_Translator_WPF
         private string mExtra1Reversed;
         private string mExtra2;
         private string mExtra2Reversed;
-        public  string Name            { get { return mName;         } set { mName         = value; mNameReversed = TextManager.ReverseString(value); } }
-        public  string NameReversed    { get { return mNameReversed; } set { mNameReversed = value; mName         = TextManager.ReverseString(value); } }
-        public  int[]  ID              { get; set; }
+        public  string Name         { get { return mName; } set { mName = value; mNameReversed = TextManager.ReverseString(value); } }
+        public  string NameReversed { get { return mNameReversed; } set { mNameReversed = value; mName = TextManager.ReverseString(value); } }
+        public  int[]  ID           { get; set; }
         public  string Description
         {
             get { return mDescription; }
@@ -103,17 +128,17 @@ namespace WLO_Translator_WPF
         // TextBox Texts
         //public string   TextBoxNameLengthText       { get; set; }
 
-        public Item ToItem(RoutedEventHandler routedEventHandlerButtonClickUpdateItem, RoutedEventHandler routedEventHandlerButtonClickJumpToWholeItem,
-                           RoutedEventHandler routedEventHandlerButtonClickJumpToID, RoutedEventHandler routedEventHandlerButtonClickJumpToName,
-                           RoutedEventHandler routedEventHandlerButtonClickJumpToDescription,
-                           RoutedEventHandler routedEventHandlerButtonClickJumpToExtra1, RoutedEventHandler routedEventHandlerButtonClickJumpToExtra2,
-                           bool hasDescription, bool hasExtras)
+        public Item ToItem(RoutedEventHandler routedEventHandlerButtonClickUpdateItem,
+            RoutedEventHandler routedEventHandlerButtonClickJumpToWholeItem, RoutedEventHandler routedEventHandlerButtonClickJumpToID,
+            RoutedEventHandler routedEventHandlerButtonClickJumpToName, RoutedEventHandler routedEventHandlerButtonClickJumpToDescription,
+            RoutedEventHandler routedEventHandlerButtonClickJumpToExtra1, RoutedEventHandler routedEventHandlerButtonClickJumpToExtra2,
+            bool hasDescription, bool hasExtras, bool hasCheckBox = false, RoutedEventHandler routedEventHandlerCheckBoxClick = null)
         {
             Item item = new Item(routedEventHandlerButtonClickUpdateItem, routedEventHandlerButtonClickJumpToWholeItem,
                             routedEventHandlerButtonClickJumpToID, routedEventHandlerButtonClickJumpToName,
                             routedEventHandlerButtonClickJumpToDescription,
                             routedEventHandlerButtonClickJumpToExtra1, routedEventHandlerButtonClickJumpToExtra2,
-                            hasDescription, hasExtras);
+                            hasDescription, hasExtras, hasCheckBox, routedEventHandlerCheckBoxClick);
             item.Name                       = Name;
             item.ID                         = ID;
             if (mDescription != null)
@@ -142,9 +167,14 @@ namespace WLO_Translator_WPF
 
             return item;
         }
+
+        public int GetIDValue()
+        {
+            return ID[0] * 10000 + ID[1] * 100 + ID[2];
+        }
     }
 
-    public class Item : ListViewItem
+    public class Item : ListBoxItem, IItemBase
     {
         private string              mNameWithOriginalEncoding;
         private string              mName;
@@ -173,6 +203,7 @@ namespace WLO_Translator_WPF
         // Used for the Mark.dat file
         private Button              mButtonJumpToExtra1;
         private Button              mButtonJumpToExtra2;
+        private CheckBox            mCheckBox;
 
         private RoutedEventHandler  mRoutedEventHandlerButtonClickUpdateItem;
         private RoutedEventHandler  mRoutedEventHandlerButtonClickJumpToWholeItem;
@@ -185,6 +216,16 @@ namespace WLO_Translator_WPF
 
         private bool                HasDescription  { get; set; }
         private bool                HasExtras       { get; set; }
+
+        public bool? IsChecked
+        {
+            get { return mCheckBox?.IsChecked; }
+            set
+            {
+                if (mCheckBox != null)
+                    mCheckBox.IsChecked = value;
+            }
+        }
 
         public new string Name
         {
@@ -205,7 +246,7 @@ namespace WLO_Translator_WPF
             set
             {
                 mID = value;
-                mTextBlockID.Text = TextManager.GetIDToString(mID);//(mID[0] + mID[1]).ToString();
+                mTextBlockID.Text = TextManager.GetIDToString(mID);
             }
         }
 
@@ -215,7 +256,7 @@ namespace WLO_Translator_WPF
             set
             {
                 mDescription = value;
-                mTextBoxDescription.Text = mDescription;//RichTextBoxSetText(mDescription, ref mTextBoxDescription);
+                mTextBoxDescription.Text = mDescription;
 
                 CheckIllegalChars(ref mTextBoxDescription);
             }
@@ -247,7 +288,7 @@ namespace WLO_Translator_WPF
 
         private void CheckIllegalChars(ref TextBox textBox)
         {
-            string text = textBox.Text;//RichTextBoxGetText(ref textBox);
+            string text = textBox.Text;
             if (TextManager.IsStringContainingIllegalChar(text))
                 textBox.Background = Brushes.Red;
             else if (TextManager.IsStringContainingNonConventionalChar(text))
@@ -299,52 +340,83 @@ namespace WLO_Translator_WPF
         public Button       ButtonJumpToName            { get => mButtonJumpToName;         set => mButtonJumpToName        = value; }
         public Button       ButtonJumpToDescription     { get => mButtonJumpToDescription;  set => mButtonJumpToDescription = value; }
         public Button       ButtonJumpToExtra1          { get => mButtonJumpToExtra1;       set => mButtonJumpToExtra1      = value; }
-        public Button       ButtonJumpToExtra2          { get => mButtonJumpToExtra2;       set => mButtonJumpToExtra2      = value; }        
+        public Button       ButtonJumpToExtra2          { get => mButtonJumpToExtra2;       set => mButtonJumpToExtra2      = value; }
 
-        public Item(RoutedEventHandler routedEventHandlerButtonClickUpdateItem, RoutedEventHandler routedEventHandlerButtonClickJumpToWholeItem,
+        public Item() : base()
+        {
+            ItemInitialize(null, null, null, null, null, null, null, false, false);
+            Name = "<No Name>";
+            Description = "<No Description>";
+        }
+
+        public Item(RoutedEventHandler routedEventHandlerButtonClickUpdateItem,
+            RoutedEventHandler routedEventHandlerButtonClickJumpToWholeItem,
             RoutedEventHandler routedEventHandlerButtonClickJumpToID, RoutedEventHandler routedEventHandlerButtonClickJumpToName,
             RoutedEventHandler routedEventHandlerButtonClickJumpToDescription,
             RoutedEventHandler routedEventHandlerButtonClickJumpToExtra1, RoutedEventHandler routedEventHandlerButtonClickJumpToExtra2,
-            bool hasDescription, bool hasExtras) : base()
+            bool hasDescription, bool hasExtras, bool hasCheckBox = false, RoutedEventHandler routedEventHandlerCheckBoxClick = null) : base()
         {
-            HasDescription = hasDescription;
-            HasExtras = hasExtras;
-            
-            mTextBlockNameLength                            = new TextBlock()   { Text      = "??" };
-            mTextBlockNameLength.TextAlignment              = TextAlignment.Right;
-            mTextBlockNameLength.Width                      = 20d;
-            mTextBlockNameLength.Height                     = 22d;
-            mTextBlockNameLength.Padding                    = new Thickness(4);
-            mTextBlockID                                    = new TextBlock()   { Text      = "??" };
-            mTextBlockID.Height                             = 22d;
-            mTextBlockID.Padding                            = new Thickness(4);
+            ItemInitialize(routedEventHandlerButtonClickUpdateItem, routedEventHandlerButtonClickJumpToWholeItem,
+                routedEventHandlerButtonClickJumpToID, routedEventHandlerButtonClickJumpToName,
+                routedEventHandlerButtonClickJumpToDescription,
+                routedEventHandlerButtonClickJumpToExtra1, routedEventHandlerButtonClickJumpToExtra2,
+                hasDescription, hasExtras, hasCheckBox, routedEventHandlerCheckBoxClick);
+        }
+
+        public void ItemInitialize(RoutedEventHandler routedEventHandlerButtonClickUpdateItem,
+            RoutedEventHandler routedEventHandlerButtonClickJumpToWholeItem,
+            RoutedEventHandler routedEventHandlerButtonClickJumpToID, RoutedEventHandler routedEventHandlerButtonClickJumpToName,
+            RoutedEventHandler routedEventHandlerButtonClickJumpToDescription,
+            RoutedEventHandler routedEventHandlerButtonClickJumpToExtra1, RoutedEventHandler routedEventHandlerButtonClickJumpToExtra2,
+            bool hasDescription, bool hasExtras, bool hasCheckBox = false, RoutedEventHandler routedEventHandlerCheckBoxClick = null)
+        {
+            HasDescription  = hasDescription;
+            HasExtras       = hasExtras;
+
+            // Text block and boxes
+            mTextBlockNameLength                = new TextBlock()   { Text  = "??" };
+            mTextBlockNameLength.TextAlignment  = TextAlignment.Right;
+            mTextBlockNameLength.Width          = 20d;
+            mTextBlockNameLength.Height         = 22d;
+            mTextBlockNameLength.Padding        = new Thickness(4);
+            mTextBlockID                        = new TextBlock()   { Text  = "??" };
+            mTextBlockID.Height                 = 22d;
+            mTextBlockID.Padding                = new Thickness(4);
             int textBoxNameWidth = 120;
             if (!HasDescription && !HasExtras)
                 textBoxNameWidth = 200;
-            mTextBoxName                                    = new TextBox()     { MaxWidth  = textBoxNameWidth, Width = textBoxNameWidth };
-            mTextBoxName.TextChanged                       += TextBoxName_TextChanged;
-            mTextBoxDescription                             = new TextBox()     { MaxWidth  = 200, Width = 200 };
-            mTextBoxDescription.TextChanged                += TextBoxDescription_TextChanged;
-            mTextBoxExtra1                                  = new TextBox()     { MaxWidth  = 200, Width = 200 };
-            mTextBoxExtra1.TextChanged                     += TextBoxExtra1_TextChanged;
-            mTextBoxExtra2                                  = new TextBox()     { MaxWidth  = 200, Width = 200 };
-            mTextBoxExtra2.TextChanged                     += TextBoxExtra2_TextChanged;
+            mTextBoxName                        = new TextBox() { MaxWidth  = textBoxNameWidth, Width = textBoxNameWidth };
+            mTextBoxName.TextChanged           += TextBoxName_TextChanged;
+            mTextBoxDescription                 = new TextBox() { MaxWidth  = 200, Width = 200 };
+            mTextBoxDescription.TextChanged    += TextBoxDescription_TextChanged;
+            mTextBoxExtra1                      = new TextBox() { MaxWidth  = 200, Width = 200 };
+            mTextBoxExtra1.TextChanged         += TextBoxExtra1_TextChanged;
+            mTextBoxExtra2                      = new TextBox() { MaxWidth  = 200, Width = 200 };
+            mTextBoxExtra2.TextChanged         += TextBoxExtra2_TextChanged;
 
-            mButtonUpdateItemBasedOnNameLength              = new Button()      { Content   = "Update",     Margin = new Thickness(0, 0, 10, 0) };
-            mButtonJumpToWholeItem                          = new Button()      { Content   = "Goto Item",  Margin = new Thickness(0, 0, 10, 0) };
-            mButtonJumpToID                                 = new Button()      { Content   = "Goto" };
-            mButtonJumpToName                               = new Button()      { Content   = "Goto" };
-            mButtonJumpToDescription                        = new Button()      { Content   = "Goto",       Margin = new Thickness(10, 0, 0, 0) };
-            mButtonJumpToExtra1                             = new Button()      { Content   = "Goto",       Margin = new Thickness(10, 0, 0, 0) };
-            mButtonJumpToExtra2                             = new Button()      { Content   = "Goto",       Margin = new Thickness(10, 0, 0, 0) };
+            // Buttons
+            mButtonUpdateItemBasedOnNameLength  = new Button()  { Content   = "Update",     Margin = new Thickness(0, 0, 10, 0) };
+            mButtonJumpToWholeItem              = new Button()  { Content   = "Goto Item",  Margin = new Thickness(0, 0, 10, 0) };
+            mButtonJumpToID                     = new Button()  { Content   = "Goto" };
+            mButtonJumpToName                   = new Button()  { Content   = "Goto" };
+            mButtonJumpToDescription            = new Button()  { Content   = "Goto",       Margin = new Thickness(10, 0, 0, 0) };
+            mButtonJumpToExtra1                 = new Button()  { Content   = "Goto",       Margin = new Thickness(10, 0, 0, 0) };
+            mButtonJumpToExtra2                 = new Button()  { Content   = "Goto",       Margin = new Thickness(10, 0, 0, 0) };
 
-            mButtonUpdateItemBasedOnNameLength.Click       += routedEventHandlerButtonClickUpdateItem;
-            mButtonJumpToWholeItem.Click                   += routedEventHandlerButtonClickJumpToWholeItem;
-            mButtonJumpToID.Click                          += routedEventHandlerButtonClickJumpToID;
-            mButtonJumpToName.Click                        += routedEventHandlerButtonClickJumpToName;
-            mButtonJumpToDescription.Click                 += routedEventHandlerButtonClickJumpToDescription;
-            mButtonJumpToExtra1.Click                      += routedEventHandlerButtonClickJumpToExtra1;
-            mButtonJumpToExtra2.Click                      += routedEventHandlerButtonClickJumpToExtra2;
+            if (routedEventHandlerButtonClickUpdateItem != null)
+                mButtonUpdateItemBasedOnNameLength.Click += routedEventHandlerButtonClickUpdateItem;
+            if (routedEventHandlerButtonClickJumpToWholeItem != null)
+                mButtonJumpToWholeItem.Click                   += routedEventHandlerButtonClickJumpToWholeItem;
+            if (routedEventHandlerButtonClickJumpToID != null)
+                mButtonJumpToID.Click                          += routedEventHandlerButtonClickJumpToID;
+            if (routedEventHandlerButtonClickJumpToName != null)
+                mButtonJumpToName.Click                        += routedEventHandlerButtonClickJumpToName;
+            if (routedEventHandlerButtonClickJumpToDescription != null)
+                mButtonJumpToDescription.Click                 += routedEventHandlerButtonClickJumpToDescription;
+            if (routedEventHandlerButtonClickJumpToExtra1 != null)
+                mButtonJumpToExtra1.Click                      += routedEventHandlerButtonClickJumpToExtra1;
+            if (routedEventHandlerButtonClickJumpToExtra2 != null)
+                mButtonJumpToExtra2.Click                      += routedEventHandlerButtonClickJumpToExtra2;
 
             mButtonUpdateItemBasedOnNameLength.Tag          = this;
             mButtonJumpToWholeItem.Tag                      = this;
@@ -354,6 +426,7 @@ namespace WLO_Translator_WPF
             mButtonJumpToExtra1.Tag                         = this;
             mButtonJumpToExtra2.Tag                         = this;
 
+            // Routed Event Handlers
             mRoutedEventHandlerButtonClickUpdateItem        = routedEventHandlerButtonClickUpdateItem;
             mRoutedEventHandlerButtonClickJumpToWholeItem   = routedEventHandlerButtonClickJumpToWholeItem;
             mRoutedEventHandlerButtonClickJumpToID          = routedEventHandlerButtonClickJumpToID;
@@ -367,33 +440,60 @@ namespace WLO_Translator_WPF
                 Orientation = Orientation.Horizontal,
                 Children =
                 {
-                    new Label() { Content = "Length:" },
+                    new Label() { Content = "Length:",  VerticalAlignment = VerticalAlignment.Center },
                     mTextBlockNameLength,
 
-                    new Label() { Content = "ID:" },
+                    new Label() { Content = "ID:",      VerticalAlignment = VerticalAlignment.Center },
                     mTextBlockID,
 
-                    new Label() { Content = "Name: " },
+                    new Label() { Content = "Name: ",   VerticalAlignment = VerticalAlignment.Center },
                     mTextBoxName                    
-                }                
+                }
             };
 
+            // Add description and extras depending on if this should be done for the selected file type
+            StackPanel stackPanel = Content as StackPanel;
             if (hasDescription)
             {
-                StackPanel stackPanel = Content as StackPanel;
-                stackPanel.Children.Add(new Label() { Content = "Description: " });
+                stackPanel.Children.Add(new Label() { Content = "Description: ", VerticalAlignment = VerticalAlignment.Center });
                 stackPanel.Children.Add(mTextBoxDescription);
             }
 
             if (hasExtras)
             {
-                StackPanel stackPanel = Content as StackPanel;
-                stackPanel.Children.Add(new Label() { Content = "Extra 1: " });
+                stackPanel.Children.Add(new Label() { Content = "Extra 1: ", VerticalAlignment = VerticalAlignment.Center });
                 stackPanel.Children.Add(mTextBoxExtra1);
-                stackPanel.Children.Add(new Label() { Content = "Extra 2: " });
+                stackPanel.Children.Add(new Label() { Content = "Extra 2: ", VerticalAlignment = VerticalAlignment.Center });
                 stackPanel.Children.Add(mTextBoxExtra2);
             }
-        }        
+
+            if (hasCheckBox)
+            {
+                mCheckBox = new CheckBox()
+                {
+                    VerticalAlignment   = VerticalAlignment.Center,
+                    Margin              = new Thickness(0, 0, 10, 0),
+                    Tag                 = this
+                };
+
+                if (routedEventHandlerCheckBoxClick != null)
+                    mCheckBox.Click += routedEventHandlerCheckBoxClick;
+
+                stackPanel.Children.Insert(0, mCheckBox);
+            }
+
+            // Bind ThemeManager brushes to Label and TextBoxes' foreground property
+            Binding myBinding               = new Binding();
+            myBinding.Source                = ThemeManager.BindingBrushes;
+            myBinding.Path                  = new PropertyPath("BrushForegroundLabel");
+            myBinding.Mode                  = BindingMode.TwoWay;
+            myBinding.UpdateSourceTrigger   = UpdateSourceTrigger.PropertyChanged;
+
+            foreach (Label label in stackPanel.Children.OfType<Label>())
+                label.SetBinding(ForegroundProperty, myBinding);
+            foreach (TextBox textBox in stackPanel.Children.OfType<TextBox>())
+                textBox.SetBinding(ForegroundProperty, myBinding);
+        }
 
         public void SetEncoding(FontFamily fontFamily, Encoding encoding)
         {
@@ -480,7 +580,8 @@ namespace WLO_Translator_WPF
         public Item Clone()
         {
             Item itemClone = new Item(mRoutedEventHandlerButtonClickUpdateItem, mRoutedEventHandlerButtonClickJumpToWholeItem,
-                mRoutedEventHandlerButtonClickJumpToID, mRoutedEventHandlerButtonClickJumpToName, mRoutedEventHandlerButtonClickJumpToDescription,
+                mRoutedEventHandlerButtonClickJumpToID, mRoutedEventHandlerButtonClickJumpToName,
+                mRoutedEventHandlerButtonClickJumpToDescription,
                 mRoutedEventHandlerButtonClickJumpToExtra1, mRoutedEventHandlerButtonClickJumpToExtra2, HasDescription, HasExtras);
 
             // Ints and strings
@@ -549,6 +650,6 @@ namespace WLO_Translator_WPF
                 return true;
             else
                 return false;
-        }
+        }        
     }
 }

@@ -9,10 +9,12 @@ namespace WLO_Translator_WPF
 {
     static class Translation
     {
-        private static WindowLoadingBar mWindowLoadingBar;
+        //private static WindowLoadingBar mWindowLoadingBar;
         private static int              mProgress           = 0;
         private static int              mOldProgress        = 0;
         private static bool             mCancelRequest      = false;
+        private static bool             mIsTranslating      = false;
+        private static List<ItemData>   mItemsWithoutTranslations;
 
         private class ItemDataPart
         {
@@ -32,23 +34,24 @@ namespace WLO_Translator_WPF
             }
         }
 
-        public static async Task<string> TranslateAsync(string text, List<ItemData> foundItemData, List<ItemData> storedItemData)
+        public static async Task<string> TranslateAsync(string text, List<ItemData> foundItemData, List<ItemData> storedItemData,
+            FileItemProperties fileItemProperties, bool isMultiTranslator = false)
         {
             mCancelRequest = false;
 
-            if (mWindowLoadingBar != null)
+            if (mIsTranslating)
                 return null;
+
+            mIsTranslating = true;
+            mItemsWithoutTranslations = new List<ItemData>();
 
             // Open loading bar Window
             Application.Current.Dispatcher.Invoke(() =>
             {
-                mWindowLoadingBar = new WindowLoadingBar("Translating", "Translating Found Items", "Translated: ", foundItemData.Count());
-                mWindowLoadingBar.WindowStartupLocation = WindowStartupLocation.CenterOwner;
-                mWindowLoadingBar.Owner = Application.Current.MainWindow;
-                mWindowLoadingBar.Value = 0;
-                //mWindowLoadingBar.Maximum = foundItemData.Count();
-                _ = Task.Run(() => { Application.Current.Dispatcher.Invoke(() => { mWindowLoadingBar.ShowDialog(); }); });
+                LoadingBarManager.ShowOrInitializeLoadingBar("Found", 0d, fileItemProperties, foundItemData.Count(), true);
             });
+
+            LoadingBarManager.WaitUntilValueHasChanged();
 
             // Calculate how many tasks and items per task that it should be
             int taskAmount = 0, maxTasks = 1000;
@@ -70,7 +73,8 @@ namespace WLO_Translator_WPF
             int itemStartPosition = 0;
             int itemStartIndex    = 0;
 
-            foundItemData.Sort((ItemData itemData1, ItemData itemData2) => { return itemData1.ItemStartPosition.CompareTo(itemData2.ItemStartPosition); });
+            foundItemData.Sort((ItemData itemData1, ItemData itemData2) => {
+                return itemData1.ItemStartPosition.CompareTo(itemData2.ItemStartPosition); });
 
             // Collect the info for tasks
             for (int i = 0; i < taskAmount; i++)
@@ -86,7 +90,8 @@ namespace WLO_Translator_WPF
 
                 if (itemStartPosition > foundItemData[itemStartIndex].ItemStartPosition)
                     throw new ArgumentException("itemStartPosition (" + itemStartPosition.ToString() + ") > "
-                        + "foundItemData[itemStartIndex].ItemStartPosition (" + foundItemData[itemStartIndex].ItemStartPosition.ToString() + ")");
+                        + "foundItemData[itemStartIndex].ItemStartPosition ("
+                        + foundItemData[itemStartIndex].ItemStartPosition.ToString() + ")");
 
                 int itemEndPosition     = taskItemLast.ItemEndPosition;
 
@@ -108,7 +113,8 @@ namespace WLO_Translator_WPF
                 tasks.Add(Task.Run(() => TaskTranslatePartOfString
                 (
                     foundItemData, storedItemData, itemDataPart.Substring,
-                    itemDataPart.TextPartStartPosition, itemDataPart.ItemToStartFromIndex, itemDataPart.ItemsToTranslate, itemDataPart.Index
+                    itemDataPart.TextPartStartPosition, itemDataPart.ItemToStartFromIndex, itemDataPart.ItemsToTranslate,
+                    itemDataPart.Index
                 )));
                 semaphore.Release();
             }
@@ -124,12 +130,12 @@ namespace WLO_Translator_WPF
                 {
                     Application.Current.Dispatcher.Invoke(() =>
                     {
-                        if (mWindowLoadingBar == null || mWindowLoadingBar.DialogResult == false)
+                        if (LoadingBarManager.IsLoadingBarNull() || LoadingBarManager.GetDialogResult() == false)
                             mCancelRequest = true;
                         else
                         {
-                            mWindowLoadingBar.Value = mProgress;
-                            loadingBarValue = mWindowLoadingBar.Value;
+                            LoadingBarManager.Value = mProgress;
+                            loadingBarValue = LoadingBarManager.Value;
                         }
                     });
 
@@ -161,9 +167,11 @@ namespace WLO_Translator_WPF
             // Close loading bar
             Application.Current.Dispatcher.Invoke(() =>
             {
-                mWindowLoadingBar?.Close();
-                mWindowLoadingBar = null;
+                if (!isMultiTranslator)
+                    LoadingBarManager.CloseLoadingBar();
             });
+
+            mIsTranslating = false;
 
             return result;
         }
@@ -180,14 +188,14 @@ namespace WLO_Translator_WPF
                     break;
 
                 ItemData foundItem  = foundItemData.ElementAt(i);
-                ItemData storedItem = storedItemDataEnumerable.First((ItemData item) =>
+                ItemData storedItem = storedItemDataEnumerable.FirstOrDefault((ItemData item) =>
                 {
-                    //return TextManager.GetIDToString(item.ID) == TextManager.GetIDToString(foundItem.ID);
                     return Item.CompareIDs(item.ID, foundItem.ID);
                 });
 
                 if (storedItem == null)
                 {
+                    mItemsWithoutTranslations.Add(foundItem);
                     Console.WriteLine("Did not find the item \"" + foundItem.Name + "\" (ID: " + TextManager.GetIDToString(foundItem.ID) +
                         ") in storedItemData");
                     ++itemsTranslated;
@@ -195,88 +203,97 @@ namespace WLO_Translator_WPF
                     continue;
                 }
 
-                //if (itemToStartFromIndex == 0)
-                //    Console.WriteLine("Text before:" + textPart.Substring(0, 100));
-                //int textPartLength = textPart.Length;
-                //Console.WriteLine((foundItem.NameStartPosition - textPartStartPosition).ToString() + "(" + textPartLength + ")");
-
                 int textPartLengthOld = textPart.Length;
-                // Replace item name length
-                string storedItemNameLength = System.Text.Encoding.GetEncoding(1252).GetString(new byte[] { (byte)storedItem.Name.Length });
-                textPart = TextManager.GetReplacedPartString(textPart, storedItemNameLength,
-                    foundItem.ItemStartPosition - textPartStartPosition,
-                    foundItem.ItemStartPosition - textPartStartPosition + 1);
+                //// Replace item name length
+                //string storedItemNameLength = System.Text.Encoding.GetEncoding(1252).GetString(new byte[] { (byte)storedItem.Name.Length });
+                //textPart = TextManager.GetReplacedPartString(textPart, storedItemNameLength,
+                //    foundItem.ItemStartPosition - textPartStartPosition,
+                //    foundItem.ItemStartPosition - textPartStartPosition + 1);
 
-                // Replace item name
-                int nameLengthDifference = foundItem.Name.Length - storedItem.Name.Length;
-                textPart = TextManager.GetReplacedPartString(textPart,
-                    TextManager.GetNullStringOfLength(nameLengthDifference) +
-                        storedItem.NameReversed,
-                    foundItem.NameStartPosition - textPartStartPosition - TextManager.GetNullsToDecreaseAmount(nameLengthDifference),
-                    foundItem.NameEndPosition - textPartStartPosition);
+                //// Replace item name
+                //int nameLengthDifference = foundItem.Name.Length - storedItem.Name.Length;
+                //textPart = TextManager.GetReplacedPartString(textPart,
+                //    TextManager.GetNullStringOfLength(nameLengthDifference) +
+                //        storedItem.NameReversed,
+                //    foundItem.NameStartPosition - textPartStartPosition - TextManager.GetNullsToDecreaseAmount(nameLengthDifference),
+                //    foundItem.NameEndPosition - textPartStartPosition);
+
+                ReplaceTextAtPosition(ref textPart, textPartStartPosition, foundItem.ItemStartPosition, storedItem.NameReversed,
+                    foundItem.Name.Length, foundItem.NameStartPosition, foundItem.NameEndPosition);
 
                 if (storedItem.Description != null && storedItem.Description != "")
                 {
-                    // Replace item description length
-                    string storedItemDescriptionLength = System.Text.Encoding.GetEncoding(1252).GetString(new byte[] { (byte)storedItem.Description.Length });
-                    textPart = TextManager.GetReplacedPartString(textPart, storedItemDescriptionLength,
-                        foundItem.DescriptionLengthPosition - textPartStartPosition,
-                        foundItem.DescriptionLengthPosition - textPartStartPosition + 1);
+                    //// Replace item description length
+                    //string storedItemDescriptionLength = System.Text.Encoding.GetEncoding(1252).GetString(
+                    //    new byte[] { (byte)storedItem.Description.Length });
+                    //textPart = TextManager.GetReplacedPartString(textPart, storedItemDescriptionLength,
+                    //    foundItem.DescriptionLengthPosition - textPartStartPosition,
+                    //    foundItem.DescriptionLengthPosition - textPartStartPosition + 1);
 
-                    // Replace item description
-                    int descriptionLengthDifference = foundItem.Description.Length - storedItem.Description.Length;
-                    textPart = TextManager.GetReplacedPartString(textPart,
-                        TextManager.GetNullStringOfLength(descriptionLengthDifference) +
-                            storedItem.DescriptionReversed,
-                        foundItem.DescriptionStartPosition - textPartStartPosition - TextManager.GetNullsToDecreaseAmount(descriptionLengthDifference),
-                        foundItem.DescriptionEndPosition - textPartStartPosition);
+                    //// Replace item description
+                    //int descriptionLengthDifference = foundItem.Description.Length - storedItem.Description.Length;
+                    //textPart = TextManager.GetReplacedPartString(textPart,
+                    //    TextManager.GetNullStringOfLength(descriptionLengthDifference) +
+                    //        storedItem.DescriptionReversed,
+                    //    foundItem.DescriptionStartPosition - textPartStartPosition
+                    //        - TextManager.GetNullsToDecreaseAmount(descriptionLengthDifference),
+                    //    foundItem.DescriptionEndPosition - textPartStartPosition);
+
+                    ReplaceTextAtPosition(ref textPart, textPartStartPosition, foundItem.DescriptionLengthPosition,
+                        storedItem.DescriptionReversed, foundItem.Description.Length, foundItem.DescriptionStartPosition,
+                        foundItem.DescriptionEndPosition);
                 }
                 //else
                 //    Console.WriteLine(storedItem.Name + "'s description empty");
 
                 if (storedItem.Extra1 != null && storedItem.Extra1 != "")
                 {
-                    // Replace item extra1 length
-                    string storedItemExtra1Length = System.Text.Encoding.GetEncoding(1252).GetString(new byte[] { (byte)storedItem.Extra1.Length });
-                    textPart = TextManager.GetReplacedPartString(textPart, storedItemExtra1Length,
-                        foundItem.Extra1LengthPosition - textPartStartPosition,
-                        foundItem.Extra1LengthPosition - textPartStartPosition + 1);
+                    //// Replace item extra1 length
+                    //string storedItemExtra1Length = System.Text.Encoding.GetEncoding(1252).GetString(
+                    //    new byte[] { (byte)storedItem.Extra1.Length });
+                    //textPart = TextManager.GetReplacedPartString(textPart, storedItemExtra1Length,
+                    //    foundItem.Extra1LengthPosition - textPartStartPosition,
+                    //    foundItem.Extra1LengthPosition - textPartStartPosition + 1);
 
-                    // Replace item extra1
-                    int extra1LengthDifference = foundItem.Extra1.Length - storedItem.Extra1.Length;
-                    textPart = TextManager.GetReplacedPartString(textPart,
-                        TextManager.GetNullStringOfLength(extra1LengthDifference) +
-                            storedItem.Extra1Reversed,
-                        foundItem.Extra1StartPosition - textPartStartPosition - TextManager.GetNullsToDecreaseAmount(extra1LengthDifference),
-                        foundItem.Extra1EndPosition - textPartStartPosition);
+                    //// Replace item extra1
+                    //int extra1LengthDifference = foundItem.Extra1.Length - storedItem.Extra1.Length;
+                    //textPart = TextManager.GetReplacedPartString(textPart,
+                    //    TextManager.GetNullStringOfLength(extra1LengthDifference) +
+                    //        storedItem.Extra1Reversed,
+                    //    foundItem.Extra1StartPosition - textPartStartPosition - TextManager.GetNullsToDecreaseAmount(extra1LengthDifference),
+                    //    foundItem.Extra1EndPosition - textPartStartPosition);
+
+                    ReplaceTextAtPosition(ref textPart, textPartStartPosition, foundItem.Extra1LengthPosition,
+                        storedItem.Extra1Reversed, foundItem.Extra1.Length, foundItem.Extra1StartPosition,
+                        foundItem.Extra1EndPosition);
                 }
 
                 if (storedItem.Extra2 != null && storedItem.Extra2 != "")
                 {
-                    // Replace item extra2 length
-                    string storedItemExtra2Length = System.Text.Encoding.GetEncoding(1252).GetString(new byte[] { (byte)storedItem.Extra2.Length });
-                    textPart = TextManager.GetReplacedPartString(textPart, storedItemExtra2Length,
-                        foundItem.Extra2LengthPosition - textPartStartPosition,
-                        foundItem.Extra2LengthPosition - textPartStartPosition + 1);
+                    //// Replace item extra2 length
+                    //string storedItemExtra2Length = System.Text.Encoding.GetEncoding(1252).GetString(
+                    //    new byte[] { (byte)storedItem.Extra2.Length });
+                    //textPart = TextManager.GetReplacedPartString(textPart, storedItemExtra2Length,
+                    //    foundItem.Extra2LengthPosition - textPartStartPosition,
+                    //    foundItem.Extra2LengthPosition - textPartStartPosition + 1);
 
-                    // Replace item extra2
-                    int extra2LengthDifference = foundItem.Extra2.Length - storedItem.Extra2.Length;
-                    textPart = TextManager.GetReplacedPartString(textPart,
-                        TextManager.GetNullStringOfLength(extra2LengthDifference) +
-                            storedItem.Extra2Reversed,
-                        foundItem.Extra2StartPosition - textPartStartPosition - TextManager.GetNullsToDecreaseAmount(extra2LengthDifference),
-                        foundItem.Extra2EndPosition - textPartStartPosition);
+                    //// Replace item extra2
+                    //int extra2LengthDifference = foundItem.Extra2.Length - storedItem.Extra2.Length;
+                    //textPart = TextManager.GetReplacedPartString(textPart,
+                    //    TextManager.GetNullStringOfLength(extra2LengthDifference) +
+                    //        storedItem.Extra2Reversed,
+                    //    foundItem.Extra2StartPosition - textPartStartPosition - TextManager.GetNullsToDecreaseAmount(extra2LengthDifference),
+                    //    foundItem.Extra2EndPosition - textPartStartPosition);
+
+                    ReplaceTextAtPosition(ref textPart, textPartStartPosition, foundItem.Extra2LengthPosition,
+                        storedItem.Extra2Reversed, foundItem.Extra2.Length, foundItem.Extra2StartPosition,
+                        foundItem.Extra2EndPosition);
                 }
 
-                //if (itemToStartFromIndex == 0)
-                //    Console.WriteLine("Text after:" + textPart.Substring(0, 100));
                 if (textPartLengthOld != textPart.Length)
                     Console.WriteLine("ERROR: Text length before (" + textPartLengthOld.ToString() +
                         "not equal to the length after:" + textPart.Length.ToString());
 
-                //if (i > 10)
-                //    break;
-                //++i;
                 ++itemsTranslated;
                 ++mProgress;
             }
@@ -284,6 +301,27 @@ namespace WLO_Translator_WPF
             Console.WriteLine("Task items translated: " + itemsTranslated.ToString());
 
             return textPart;
+        }
+
+        private static void ReplaceTextAtPosition(ref string text, int textStartIndex, int lengthStartIndex,
+            string replace, int oldTextLength, int replaceStartIndex, int replaceEndIndex)
+        {
+            // Replace length
+            string replaceLength = System.Text.Encoding.GetEncoding(1252).GetString(new byte[] { (byte)replace.Length });
+            text = TextManager.GetReplacedPartString(text, replaceLength,
+                lengthStartIndex    - textStartIndex,
+                lengthStartIndex    - textStartIndex + 1);
+
+            // Replace text
+            int lengthDifference = oldTextLength - replace.Length;
+            text = TextManager.GetReplacedPartString(text, TextManager.GetNullStringOfLength(lengthDifference) + replace,
+                replaceStartIndex   - textStartIndex - TextManager.GetNullsToDecreaseAmount(lengthDifference),
+                replaceEndIndex     - textStartIndex);
+        }
+
+        public static List<ItemData> GetItemsWithoutTranslations()
+        {
+            return mItemsWithoutTranslations;
         }
     }
 }

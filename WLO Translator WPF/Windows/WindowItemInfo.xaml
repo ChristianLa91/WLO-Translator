@@ -7,17 +7,17 @@
         mc:Ignorable="d"
         Title="Item Info" Height="223" Width="480" Topmost="True">
     <Grid>
-        <RichTextBox x:Name="RichTextBoxItemData" Margin="10,19,10,10" SelectionChanged="RichTextBoxItemData_SelectionChanged" FontFamily="Courier New" FontSize="14">
+        <RichTextBox x:Name="RichTextBoxItemData" Margin="10,19,10,10" SelectionChanged="RichTextBoxItemData_SelectionChanged" FontFamily="Courier New" FontSize="14" IsReadOnly="True" IsReadOnlyCaretVisible="True" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
             <FlowDocument>
                 <Paragraph>
                     <Run Text=""/>
                 </Paragraph>
             </FlowDocument>
         </RichTextBox>
-        <Label Content="Item Data:" HorizontalAlignment="Left" Margin="4,-4,0,0" Height="26" VerticalAlignment="Top"/>
-        <Label Content="Length:" HorizontalAlignment="Left" Margin="89,-4,0,0" Height="26" VerticalAlignment="Top"/>
-        <Label Name="LabelCharCount" Content="-1" HorizontalAlignment="Left" Margin="138,-4,0,0" Height="26" VerticalAlignment="Top"/>
-        <Label Content="Selected:" HorizontalAlignment="Left" Margin="185,-4,0,0" Height="26" VerticalAlignment="Top"/>
-        <Label x:Name="LabelSelected" Content="-1" HorizontalAlignment="Left" Margin="242,-4,0,0" Height="26" VerticalAlignment="Top"/>
+        <Label Content="Length:" HorizontalAlignment="Left" Margin="4,-4,0,0" Height="26" VerticalAlignment="Top"/>
+        <Label Name="LabelCharCount" Content="-1" HorizontalAlignment="Left" Margin="53,-4,0,0" Height="26" VerticalAlignment="Top"/>
+        <Label Content="Selected:" HorizontalAlignment="Left" Margin="102,-4,0,0" Height="26" VerticalAlignment="Top"/>
+        <Label x:Name="LabelSelected" Content="-1" HorizontalAlignment="Left" Margin="159,-4,0,0" Height="26" VerticalAlignment="Top"/>
+        <CheckBox x:Name="CheckBoxReverseShownText" Content="Reverse Shown Text" HorizontalAlignment="Left" Margin="224,2,0,0" VerticalAlignment="Top" Click="CheckBoxReverseShownText_Click"/>
     </Grid>
 </Window>
