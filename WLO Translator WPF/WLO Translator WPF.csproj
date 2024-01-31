@@ -6,7 +6,7 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{A43B200C-300E-4416-91C3-B5A4E1D465EC}</ProjectGuid>
+    <ProjectGuid>{CEB28068-25C2-4173-88C4-352D51E52679}</ProjectGuid>
     <OutputType>WinExe</OutputType>
     <RootNamespace>WLO_Translator_WPF</RootNamespace>
     <AssemblyName>WLO Translator WPF</AssemblyName>
