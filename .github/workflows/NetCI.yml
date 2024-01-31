@@ -32,3 +32,10 @@ jobs:
       
     - name: Build and Solution
       run: msbuild "WLO Translator WPF.sln"
+
+    - name: Sign binary
+      uses: lando/code-sign-action@v2
+      with:
+        file: path/to/binary
+        certificate-data: ${{ secrets.WINDOZE_CERT_DATA }}
+        certificate-password: ${{ secrets.WINDOZE_CERT_PASSWORD }}
