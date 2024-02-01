@@ -36,6 +36,11 @@ jobs:
     - name: Sign binary
       uses: lando/code-sign-action@v2
       with:
-        file: path/to/binary
+        file: /bin/release
         certificate-data: ${{ secrets.WINDOZE_CERT_DATA }}
         certificate-password: ${{ secrets.WINDOZE_CERT_PASSWORD }}
+
+    - uses: actions/upload-artifact@v4
+      with:
+        name: my-artifact
+        path: /bin/release
