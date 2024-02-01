@@ -18,6 +18,8 @@ jobs:
     steps:
     # Checks out your repository under $GITHUB_WORKSPACE, so your job can access it
     - uses: actions/checkout@v2
+      env:
+        NODE_EXTRA_CA_CERTS: /etc/ssl/certs/ca-bundle.crt
 
     - name: Setup MSBuild
       uses: microsoft/setup-msbuild@v1.1
@@ -33,13 +35,13 @@ jobs:
     - name: Build and Solution
       run: msbuild "WLO Translator WPF.sln"
 
-    - name: Sign binary
-      uses: lando/code-sign-action@v2
-      with:
-        version: mit
-        file: /bin/Release
-        certificate-data: ${{ secrets.WINDOZE_CERT_DATA }}
-        certificate-password: ${{ secrets.WINDOZE_CERT_PASSWORD }}
+    #- name: Sign binary
+    #  uses: lando/code-sign-action@v2
+    #  with:
+    #    version: mit
+    #    file: /bin/Release
+    #    certificate-data: ${{ secrets.WINDOZE_CERT_DATA }}
+    #    certificate-password: ${{ secrets.WINDOZE_CERT_PASSWORD }}
 
     - name: nadeemjazmawe/inno-setup-action-CLI
       # You may pin to the exact commit or the version.
