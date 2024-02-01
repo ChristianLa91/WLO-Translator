@@ -36,7 +36,7 @@ jobs:
     - name: Sign binary
       uses: lando/code-sign-action@v2
       with:
-        file: /bin/Rebug
+        file: /bin/Release
         certificate-data: ${{ secrets.WINDOZE_CERT_DATA }}
         certificate-password: ${{ secrets.WINDOZE_CERT_PASSWORD }}
 
