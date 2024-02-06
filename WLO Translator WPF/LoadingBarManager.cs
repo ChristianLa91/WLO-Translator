@@ -105,8 +105,16 @@ namespace WLO_Translator_WPF
         // Wait until the value of the progress bar have been updated
         public static void WaitUntilValueHasChanged()
         {
-            while (!IsValueChanged)
+            DateTime timeOut = DateTime.Now.AddSeconds(5);
+            bool timeWithLimit = DateTime.Now < timeOut;
+
+            while (!IsValueChanged && timeWithLimit)
+            {
                 Thread.Sleep(100);
+            }
+
+            if (!timeWithLimit)
+                Console.WriteLine("WaitUntilValueHasChanged()'s time limit was exceeded");
         }
     }
 }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Windows;
@@ -631,6 +632,22 @@ namespace WLO_Translator_WPF
         public int GetIDValue()
         {
             return int.Parse(TextBlockID.Text);
+        }
+
+        public Dictionary<string, object> GetExcelTextExportList()
+        {
+            Dictionary<string, object> value;
+            if (HasExtras)
+                value = new Dictionary<string, object> { { "ID", TextManager.GetIDToString(mID) },
+                        { "Name", mName }, { "Description", mDescription }, { "Extra1", mExtra1 }, { "Extra2", mExtra2 } };
+            else if (HasDescription)
+                value = new Dictionary<string, object> { { "ID", TextManager.GetIDToString(mID) },
+                        { "Name", mName }, { "Description", mDescription }, { "Extra1", mExtra1 }, { "Extra2", mExtra2 } };
+            else
+                value = new Dictionary<string, object> { { "ID", TextManager.GetIDToString(mID) },
+                        { "Name", mName }, { "Description", mDescription }, { "Extra1", mExtra1 }, { "Extra2", mExtra2 } };
+
+            return value;
         }
 
         public static bool CompareIDs(int[] firstID, int[] secondID)

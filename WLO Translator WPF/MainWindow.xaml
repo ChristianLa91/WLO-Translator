@@ -279,6 +279,8 @@
                         <Image Source="Images/Save.png"/>
                     </MenuItem.Icon>
                 </MenuItem>
+                <MenuItem x:Name="MenuItemExportFoundItemsAsExcelDocument" Header="Export Found Items as Excel Document" Click="MenuItemExportFoundItemsAsExcelDocument_Click"/>
+                <MenuItem x:Name="MenuItemExportStoredItemsAsExcelDocument" Header="Export Stored Items as Excel Document" Click="MenuItemExportStoredItemsAsExcelDocument_Click"/>
                 <!--<MenuItem x:Name="MenuItemSaveAs" Header="Save As..." Click="MenuItemSave_Click"/>-->
                 <Separator/>
                 <MenuItem x:Name="MenuItemExportFile" Header="Export File" Click="MenuItemExportFile_Click"/>
