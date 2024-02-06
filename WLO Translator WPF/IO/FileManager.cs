@@ -446,7 +446,7 @@ namespace WLO_Translator_WPF
                             }
                         }
                         else if (reader.Name == "Item")
-                        {                            
+                        {
                             ItemData currentItemData = new ItemData();
 
                             if (reader.GetAttribute("ID3") != null && reader.GetAttribute("ID2") != null
@@ -469,7 +469,7 @@ namespace WLO_Translator_WPF
 
                             if (reader.GetAttribute("Extra2") != null)
                                 currentItemData.Extra2 = reader.GetAttribute("Extra2");
-                            
+
                             // Positions
                             if (reader.GetAttribute("ItemStartPosition") != null)
                                 currentItemData.ItemStartPosition = int.Parse(reader.GetAttribute("ItemStartPosition"));
@@ -509,7 +509,7 @@ namespace WLO_Translator_WPF
 
                             storedItemsToAdd.Add(currentItemData);
 
-                            if (lastReportedTime.AddSeconds(0.02) < DateTime.Now)
+                            if (lastReportedTime.AddSeconds(0.1) < DateTime.Now)
                             {
                                 progress += storedItemsToAdd.Count;
                                 ReportProgress(ref storedItemsToAdd, (int)progress, isMultiTranslator, true);
@@ -532,7 +532,10 @@ namespace WLO_Translator_WPF
                 }
             }
             else
-                Console.WriteLine("Error: " + "The file \"" + savefilePath + "\" couldn't be opened");
+            {
+                Console.WriteLine("Currently no stored items file at: \"" + savefilePath);
+                FinishOpeningFileToTranslate(isMultiTranslator);
+            }
         }
 
         public bool OpenFileToTranslate(string filePath, bool isMultiTranslator = false)
@@ -759,6 +762,8 @@ namespace WLO_Translator_WPF
             foreach (Task<List<ItemData>> task in itemDataTasks)
             {
                 result = await task;
+                if (task.Exception != null)
+                    MessageBox.Show("Task Exception: " + task.Exception.Message);
                 foreach (ItemData itemData in result)
                 {
                     if (itemData != null)
@@ -782,6 +787,42 @@ namespace WLO_Translator_WPF
             ReportProgress(ref foundItemsToAdd, bytes.Length, isMultiTranslator, false);
         }
 
+        public void ExportFoundItemsAsExcelDocument()
+        {
+            ExportItemsAsExcelDocument("Found", ref mListBoxFoundItems);
+        }
+
+        public void ExportStoredItemsAsExcelDocument()
+        {
+            ExportItemsAsExcelDocument("Stored", ref mListBoxStoredItems);
+        }
+
+        public void ExportItemsAsExcelDocument(string typeOfItems, ref ListBox listBox)
+        {
+            if (FileItemProperties.FileType == FileType.NULL)
+                return;
+
+            SaveFileDialog saveFileDialog   = new SaveFileDialog();
+            saveFileDialog.DefaultExt       = ".xlsx";
+            saveFileDialog.Filter           = "Excel File|.xlsx";
+            saveFileDialog.Title            = "Export " + typeOfItems + " Item Data as Excel File";
+
+            if (saveFileDialog.ShowDialog() == true)
+            {
+                List<Item> items = listBox.Items.OfType<Item>().ToList();
+                List<Dictionary<string, object>> stringLists = new List<Dictionary<string, object>>();
+                for (int i = 0; i < items.Count; i++)
+                {
+                    Item item = items[i];
+                    stringLists.Add(item.GetExcelTextExportList());
+                }
+
+                MiniExcelLibs.MiniExcel.SaveAs(saveFileDialog.FileName, stringLists);
+
+                mLabelReportInfo.Content = "Export Stored Items as an Excel Document at \"" + saveFileDialog.FileName + "\"";
+            }
+        }
+
         private void BackgroundWorkerFoundItemData_ProgressChanged(object sender, ProgressChangedEventArgs e)
         {
             object[] arguments = (object[])e.UserState;
@@ -797,6 +838,8 @@ namespace WLO_Translator_WPF
             //IsFoundItemDataCollectionCompleted = true;
             object[] arguments = e.Result as object[];
             StartBackgroundWorkerLoadStoredItemData(arguments[0] as string, (bool)arguments[1]);
+
+            Console.WriteLine("Found Item Data Worker Completed");
         }
         #endregion
 
@@ -830,6 +873,8 @@ namespace WLO_Translator_WPF
             while (!LoadingBarManager.IsLoadingCompleted()/*!IsFoundItemDataCollectionCompleted*/)
                 Thread.Sleep(Constants.LOADING_SLEEP_LENGTH);
 
+            Console.WriteLine("Loading Stored Item Data");
+
             LoadStoredItemData(arguments[0] as string, (bool)arguments[1]);
 
             e.Result = arguments[1];
@@ -847,9 +892,9 @@ namespace WLO_Translator_WPF
 
         private void BackgroundWorkerStoredItemData_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
         {
-            bool isMultiTranslator = (bool)e.Result;
-            if (!isMultiTranslator)
-                ((MainWindow)Application.Current.MainWindow).InitializeItemSearch();
+            //bool isMultiTranslator = (bool)e.Result;
+            //if (!isMultiTranslator)
+            //    ((MainWindow)Application.Current.MainWindow).InitializeItemSearch();
         }
         #endregion
 
@@ -1049,6 +1094,8 @@ namespace WLO_Translator_WPF
                 foreach (Task<List<Item>> task in tasks)
                 {
                     result = await task;
+                    if (task.Exception != null)
+                        MessageBox.Show("Task Exception: " + task.Exception.Message);
                     foreach (Item item in result)
                     {
                         observableItemCollection.Add(item);
@@ -1056,7 +1103,12 @@ namespace WLO_Translator_WPF
                         if (observableItemCollection.Count > 1 &&
                             observableItemCollection[observableItemCollection.Count - 2].ItemEndPosition >=
                             observableItemCollection[observableItemCollection.Count - 1].ItemStartPosition)
+                        {
+                            Console.WriteLine("ItemEndPosition >= ItemStartPosition");
+#if DEBUG
                             MessageBox.Show("ItemEndPosition >= ItemStartPosition");
+#endif
+                        }
                     }
                 }
             }
@@ -1076,16 +1128,26 @@ namespace WLO_Translator_WPF
 
             if (isStoredItems && IsFileOpenToTranslateRunning && LoadingBarManager.IsLoadingCompleted())
             {
-                if (!isMultiTranslator)
+                FinishOpeningFileToTranslate(isMultiTranslator);
+            }
+        }
+
+        private void FinishOpeningFileToTranslate(bool isMultiTranslator)
+        {
+            if (!isMultiTranslator)
+            {
+                mDispatcher.Invoke(() =>
                 {
                     LoadingBarManager.CloseLoadingBar();
-                    mListBoxFoundItems.ItemsSource      = mItemSourceListBoxFoundItemsTemporary;
-                    mListBoxStoredItems.ItemsSource     = mItemSourceListBoxStoredItemsTemporary;
-                }
+                    mListBoxFoundItems.ItemsSource  = mItemSourceListBoxFoundItemsTemporary;
+                    mListBoxStoredItems.ItemsSource = mItemSourceListBoxStoredItemsTemporary;
 
-                IsFileOpenToTranslateRunning            = false;
-                IsStoredItemDataToItemsProcessRunning   = false;
+                    ((MainWindow)Application.Current.MainWindow).InitializeItemSearch();
+                });
             }
+
+            IsFileOpenToTranslateRunning            = false;
+            IsStoredItemDataToItemsProcessRunning   = false;
         }
 
         public string ExportFile(string path = null, string text = null)

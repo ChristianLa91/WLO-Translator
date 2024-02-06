@@ -20,10 +20,10 @@ namespace WLO_Translator_WPF
         private OpenFileDialog                              mOpenFileDialog;
         private System.Windows.Forms.FolderBrowserDialog    mFolderBrowserDialog;
         private List<ItemData>                              mFoundItems;
-        private List<List<ItemData>>                        mStoredItemLists;
+        private Dictionary<FileType, List<ItemData>>        mStoredItemsDictionaty;
         private List<string>                                mTranslatedFileTexts;
         private List<FileItemProperties>                    mFileItemProperties;
-        private List<ListBoxItemMTData>                     mListBoxItemMTData; // Used to see which files should be translated
+        private List<ListBoxItemMTData>                     mFilesSelectedForTranslation; // Used to see which files should be translated
 
         public WindowMultiTranslator(ref FileManager fileManager)
         {
@@ -139,15 +139,15 @@ namespace WLO_Translator_WPF
 
         private void ButtonTranslateSelected_Click(object sender, RoutedEventArgs e)
         {
-            mListBoxItemMTData = new List<ListBoxItemMTData>();
+            mFilesSelectedForTranslation = new List<ListBoxItemMTData>();
 
             foreach (ListBoxItemMT listBoxItemMultiTranslator in ListBoxFiles.Items.OfType<ListBoxItemMT>())
             {
                 if (listBoxItemMultiTranslator.IsChecked == true)
-                    mListBoxItemMTData.Add(listBoxItemMultiTranslator.GetDataClass());
+                    mFilesSelectedForTranslation.Add(listBoxItemMultiTranslator.GetDataClass());
             }
 
-            if (mListBoxItemMTData.Count > 0)
+            if (mFilesSelectedForTranslation.Count > 0)
             {
                 ListBoxTranslatedFiles.Items.Clear();
                 TreeViewUnstoredItems.Items.Clear();
@@ -158,13 +158,14 @@ namespace WLO_Translator_WPF
         private async Task TranslateSelectedFilesAsync()
         {
             mFoundItems             = new List<ItemData>();
-            mStoredItemLists        = new List<List<ItemData>>();
+            //mStoredItemLists        = new List<List<ItemData>>();
+            mStoredItemsDictionaty   = new Dictionary<FileType, List<ItemData>>();
             mTranslatedFileTexts    = new List<string>();
             mFileItemProperties     = new List<FileItemProperties>();
 
             try
             { 
-                foreach (ListBoxItemMTData itemData in mListBoxItemMTData)
+                foreach (ListBoxItemMTData itemData in mFilesSelectedForTranslation)
                 {
                     string fileName = itemData.FilePath;
 
@@ -174,11 +175,12 @@ namespace WLO_Translator_WPF
                         Thread.Sleep(500);
 
                     mFoundItems     = mFileManager.GetFoundItems().ToList();
-                    mStoredItemLists.Add(mFileManager.GetStoredItems().ToList());
+                    //mStoredItemLists.Add(mFileManager.GetStoredItems().ToList());
+                    mStoredItemsDictionaty.Add(mFileManager.FileItemProperties.FileType, mFileManager.GetStoredItems().ToList());
 
                     // Translate collected text data
                     string translatedText = await Translation.TranslateAsync(mFileManager.GetOpenFileText(), mFoundItems,
-                        mStoredItemLists.Last(), mFileManager.FileItemProperties, true);
+                        mStoredItemsDictionaty.Last().Value, mFileManager.FileItemProperties, true);
 
                     // Add unstored items to tree view
                     Application.Current.Dispatcher.Invoke(() =>
@@ -186,7 +188,8 @@ namespace WLO_Translator_WPF
                         if (Translation.GetItemsWithoutTranslations()?.Count > 0)
                         {
                             // Create a treeViewItemMT that groups the file type items together
-                            TreeViewItemMT treeViewItemMT = new TreeViewItemMT(itemData.FilePath, itemData.FileType, CheckBoxTreeViewMT_Click);
+                            TreeViewItemMT treeViewItemMT = new TreeViewItemMT(itemData.FilePath, itemData.FileType,
+                                CheckBoxTreeViewMT_Click);
                             treeViewItemMT.IsExpanded = true;
                             TreeViewUnstoredItems.Items.Add(treeViewItemMT);
 
@@ -254,26 +257,45 @@ namespace WLO_Translator_WPF
             }
         }
 
-        //TODO: Add the former? untranslated items to items which groups them so that they can easily added to each stored item list
+        //TODO: Switch so that TreeViewUnstoredItems has a more "single source of truth" relationship with mStoredItemLists,
+        //      or at least make sure this function works as intended
         private void ButtonStoreItems_Click(object sender, RoutedEventArgs e)
         {
-            if (mListBoxItemMTData == null || mListBoxItemMTData.Count == 0)
+            if (TreeViewUnstoredItems.Items.Count == 0)
                 return;
 
-            for (int i = 0; i < mListBoxItemMTData.Count; ++i)
+            for (int i = 0; i < TreeViewUnstoredItems.Items.Count; ++i)
             {
-                ListBoxItemMTData data = mListBoxItemMTData[i];
-                foreach (Item item in (TreeViewUnstoredItems.Items[0] as TreeViewItemMT).Items.OfType<Item>())
+                TreeViewItemMT  fileToStore     = TreeViewUnstoredItems.Items[i] as TreeViewItemMT;
+                if (fileToStore.IsChecked == true)
                 {
-                    if (item.IsChecked == true)
-                        mStoredItemLists[i].Add(item.ToItemData());
-                }
+                    List<ItemData> storedItemData = mStoredItemsDictionaty[fileToStore.FileType];
+                    foreach (Item item in fileToStore.Items.OfType<Item>())
+                    {
+                        if (item.IsChecked == true)
+                            InsertItemAtDataPositionOrder(storedItemData, item.ToItemData());
+                    }
 
-                mFileManager.SaveStoredItemData(data.FileType, mStoredItemLists[i].Cast<IItemBase>().ToList());
+                    mFileManager.SaveStoredItemData(fileToStore.FileType, storedItemData.Cast<IItemBase>().ToList());
+                }
             }
 
             string message = "Selected Unstored Items Have Been Stored";
             TextBlockReportInfo.Text = message;
+        }
+
+        // Inserts the item at the position it has in the untranslated file
+        private void InsertItemAtDataPositionOrder(List<ItemData> itemDataList, ItemData itemData)
+        {
+            int index = -1;
+
+            for (int i = 0; i < itemDataList.Count; i++)
+            {
+                if (itemDataList[i].ItemStartPosition > itemData.ItemStartPosition)
+                    index = i;
+            }
+
+            itemDataList.Insert(index, itemData);
         }
 
         private void ButtonCancel_Click(object sender, RoutedEventArgs e)

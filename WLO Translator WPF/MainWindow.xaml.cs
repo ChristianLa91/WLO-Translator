@@ -429,7 +429,7 @@ namespace WLO_Translator_WPF
                 "Clear Stored Items", MessageBoxButton.OKCancel, MessageBoxImage.Warning) == MessageBoxResult.OK)
             {
                 ItemSearch.ClearStoredItemsWhileSearching();
-                ListBoxStoredItems.Items.Clear();
+                (ListBoxStoredItems.ItemsSource as ObservableCollection<Item>).Clear();
             }
         }
 
@@ -582,19 +582,7 @@ namespace WLO_Translator_WPF
         private void ListBoxStoredItems_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
         {
             if (e.Key == System.Windows.Input.Key.Delete && ListBoxStoredItems.SelectedItem != null)
-            {
-                ObservableCollection<Item> items = ListBoxStoredItems.ItemsSource as ObservableCollection<Item>;
-                int selectedIndex = items.IndexOf(ListBoxStoredItems.SelectedItem as Item);
-                items.Remove(ListBoxStoredItems.SelectedItem as Item);
-
-                // Set focus on the next item
-                if (items.Count > selectedIndex)
-                    items[selectedIndex].Focus();
-                else if (ListBoxStoredItems.Items.Count == 1)
-                    items[0].Focus();
-                else if (items.Count > selectedIndex - 1)
-                    items[selectedIndex - 1].Focus();
-            }
+                ItemSearch.DeleteSelectedItemFromStoredItems(ref ListBoxStoredItems);
         }
 
         private void ButtonOpenText_Click(object sender, RoutedEventArgs e)
@@ -794,6 +782,16 @@ namespace WLO_Translator_WPF
             windowMultiTranslator.WindowStartupLocation = WindowStartupLocation.CenterOwner;
 
             windowMultiTranslator.ShowDialog();
+        }
+
+        private void MenuItemExportFoundItemsAsExcelDocument_Click(object sender, RoutedEventArgs e)
+        {
+            mFileManager.ExportFoundItemsAsExcelDocument();
+        }
+
+        private void MenuItemExportStoredItemsAsExcelDocument_Click(object sender, RoutedEventArgs e)
+        {
+            mFileManager.ExportStoredItemsAsExcelDocument();
         }
     }
 }

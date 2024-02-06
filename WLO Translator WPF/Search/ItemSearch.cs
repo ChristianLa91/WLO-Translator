@@ -40,12 +40,14 @@ namespace WLO_Translator_WPF
             mStoredItemDataWhileSearching       = new List<ItemData>();
             mFoundItemAndDataItemDictionary     = new Dictionary<ItemData, Item>();
             mStoredItemAndDataItemDictionary    = new Dictionary<ItemData, Item>();
+
             foreach (Item item in mFoundItemsWhileSearching)
             {
                 ItemData itemData = item.ToItemData();
                 mFoundItemDataWhileSearching.Add(itemData);
                 mFoundItemAndDataItemDictionary.Add(itemData, item);
             }
+
             foreach (Item item in mStoredItemsWhileSearching)
             {
                 ItemData itemData = item.ToItemData();
@@ -57,6 +59,8 @@ namespace WLO_Translator_WPF
         public static void ClearStoredItemsWhileSearching()
         {
             mStoredItemsWhileSearching?.Clear();
+            mStoredItemDataWhileSearching?.Clear();
+            mStoredItemAndDataItemDictionary?.Clear();
         }
 
         private static void UpdateOldVariables(string searchString,
@@ -353,24 +357,34 @@ namespace WLO_Translator_WPF
             itemSourceStoredItems.Add(item);
         }
 
-        public static void DeleteItemFromStoredItems(ref ListBox listBoxStoredItems)
+        public static void DeleteSelectedItemFromStoredItems(ref ListBox listBoxStoredItems)
         {
             ObservableCollection<Item> itemSourceStoredItems = (ObservableCollection<Item>)listBoxStoredItems.ItemsSource;
 
             // Remove selected item from both listBoxStoredItems and mStoredItemsWhileSearching
             Item selectedItem = listBoxStoredItems.SelectedItem as Item;
             int selectedIndex = itemSourceStoredItems.IndexOf(selectedItem);
-            Item storedItemWhileSearching = mStoredItemsWhileSearching.Find((Item item) => { return Item.CompareIDs(item.ID, selectedItem.ID); });
-            itemSourceStoredItems.Remove(selectedItem);
-            mStoredItemsWhileSearching.Remove(storedItemWhileSearching);
+            ItemData storedItemDataWhileSearching = mStoredItemDataWhileSearching.Find((ItemData itemData) =>
+            { return Item.CompareIDs(itemData.ID, selectedItem.ID); });
+            Item itemStored;
+            mStoredItemAndDataItemDictionary.TryGetValue(storedItemDataWhileSearching, out itemStored);
+
+            // Remove the item from memory
+            itemSourceStoredItems.Remove(selectedItem); // Remove the item from the listBox
+            mStoredItemsWhileSearching.Remove(itemStored); // Remove the item from the item list
+            mStoredItemDataWhileSearching.Remove(storedItemDataWhileSearching); // Remove the item from the itemData list
+            mStoredItemAndDataItemDictionary.Remove(storedItemDataWhileSearching); // Remove the item and itemData from the dictionary
 
             // Set focus on the next item
+            if (itemSourceStoredItems.Count == 0)
+                return;
+
             if (itemSourceStoredItems.Count > selectedIndex)
-                (itemSourceStoredItems[selectedIndex] as Item).Focus();
+                itemSourceStoredItems[selectedIndex].Focus();
             else if (itemSourceStoredItems.Count == 1)
-                (itemSourceStoredItems[0] as Item).Focus();
+                itemSourceStoredItems[0].Focus();
             else if (itemSourceStoredItems.Count > selectedIndex - 1)
-                (itemSourceStoredItems[selectedIndex - 1] as Item).Focus();
+                itemSourceStoredItems[selectedIndex - 1].Focus();
         }
 
         private static void OrderListsByID(ref List<ItemData> list)
