@@ -4,3 +4,5 @@
 ## About
 WLO Translator is a tool used to automate the translating process for the game Wonderland Online.
 The current version of the game is named Wonderland Online - Rhodes Island and the program is tested for that version -- but it is the authour of the translator's belief that it should work with any official version of the game.
+
+ WLO Translator © 2023-01-07 by Christian Larsson is licensed under CC BY-NC-SA 4.0
