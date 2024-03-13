@@ -16,13 +16,15 @@ using System.Collections.ObjectModel;
 namespace WLO_Translator_WPF
 {
     /// <summary>
-    /// Interaction logic for MainWindow.xaml
+    /// The main window of the application.
+    /// This program is meant to translate pc-versions of the game Wonderland Online.
+    /// It has been tested to work with the most current pc-version of the game (that isn't located in main-land China):
+    /// Wonderland Online - Rhodes Island.
     /// </summary>
     public partial class MainWindow : Window
     {
         private OpenFileDialog              mOpenFileDialog;
         private FileManager                 mFileManager;
-        private string                      mWindowTitle;
         private Point?                      mCursorOldPosition = null;
 
         private ObservableCollection<Item>  mLazyLoadFoundItemData;
@@ -37,8 +39,6 @@ namespace WLO_Translator_WPF
             ListBoxFoundItems.ItemsSource   = mLazyLoadFoundItemData;
             ListBoxStoredItems.ItemsSource  = mLazyLoadStoredItemData;
 
-            mWindowTitle = Title;
-
             Grid[]          frontGrids      = new Grid[] { GridFrontLeft, GridFrontMiddle, GridFrontRight };
             GroupBox[]      groupBoxes      = new GroupBox[] { GroupBoxItem, GroupBoxItemSearchOptions };
             CheckBox[]      checkBoxes      = (GroupBoxItemSearchOptions.Content as Grid).Children.OfType<CheckBox>().ToArray();            
@@ -48,6 +48,7 @@ namespace WLO_Translator_WPF
             ListBox[]       listBoxes       = new ListBox[] { ListBoxFoundItems, ListBoxStoredItems };
             TextBox[]       textBoxes       = new TextBox[] { TextBoxFileContentSearchBar };
             TextBlock[]     textBlocks      = new TextBlock[] { ProjectFileName };
+
 
             ThemeManager.Initialize(ref GridBack, ref frontGrids, ref MenuMain, ref ToolBarMain, ref groupBoxes, ref checkBoxes,
                 ref buttons, ref gridSplitters, ref labels, ref scintillaTextBox, ref listBoxes,
@@ -63,9 +64,26 @@ namespace WLO_Translator_WPF
 
             mFileManager.LoadProgramSettings();
 
-            MaxHeight = SystemParameters.MaximizedPrimaryScreenHeight - 8d;
+            ItemManager.Initialize(ref ListBoxFoundItems);
+
+            MaxHeight = SystemParameters.MaximizedPrimaryScreenHeight - 8d;            
         }
 
+        private void WindowMain_Activated(object sender, EventArgs e)
+        {
+            // Show the What's New window if it's the first time this version has been installed.
+            if (mFileManager.ShowWhatsNew())
+            {
+                WindowWhatsNew windowWhatsNew           = new WindowWhatsNew();
+                windowWhatsNew.Owner                    = this;
+                windowWhatsNew.WindowStartupLocation    = WindowStartupLocation.CenterOwner;
+                windowWhatsNew.ShowDialog();
+            }
+        }
+
+        /// <summary>
+        /// Retrieves all the objects of the UI-components from the GroupBox or the Grids that matches the specified type T
+        /// </summary>
         private T[] GetAllObjectsOfTypeFromGridFronts<T>()
         {
             List<T> typeList    = (GroupBoxItem.Content as Grid).Children.OfType<T>().ToList();
@@ -132,13 +150,16 @@ namespace WLO_Translator_WPF
             itemRightClickMenu.IsOpen = true;
         }
 
-        private void ButtonOpenFileToTranslate_Click(object sender, RoutedEventArgs e)
+        /// <summary>
+        /// Opens the .dat file that should be translated or translations should be grabbed from.
+        /// </summary>
+        private void ButtonOpenTranslationFile_Click(object sender, RoutedEventArgs e)
         {
             mOpenFileDialog = new OpenFileDialog();
 
             if (mOpenFileDialog.ShowDialog() == true)
             {                
-                if (mFileManager.OpenFileToTranslate(mOpenFileDialog.FileName))
+                if (mFileManager.OpenTranslationFile(mOpenFileDialog.FileName))
                 {
                     ComboBoxSelectedEncoding.SelectedIndex = 0;
                     ClearSearchBarsAndSearchOptions();
@@ -158,11 +179,15 @@ namespace WLO_Translator_WPF
                 checkBox.IsChecked = false;
         }
 
+        /// <summary>
+        /// Adds/removes item menu buttons from the right-click menu for the found items and adds/removes buttons in
+        /// items buttons depending on if the opened file items have descriptions and/or extras.
+        /// </summary>
         private void UpdateRightClickMenuAndItemButtons()
         {
             ContextMenu itemRightClickMenu = (ContextMenu)FindResource("ItemRightClickMenu");
 
-            if (mFileManager.FileItemProperties.HasExtras)
+            if (FileManager.FileItemProperties.HasExtras)
             {
                 (itemRightClickMenu.Items[6] as MenuItem).Visibility = Visibility.Visible;
                 (itemRightClickMenu.Items[6] as MenuItem).IsEnabled  = true;
@@ -185,7 +210,7 @@ namespace WLO_Translator_WPF
                 ButtonJumpToExtra2.Visibility   = Visibility.Hidden;
             }
 
-            if (mFileManager.FileItemProperties.HasDescription)
+            if (FileManager.FileItemProperties.HasDescription)
             {
                 (itemRightClickMenu.Items[5] as MenuItem).Visibility = Visibility.Visible;
                 (itemRightClickMenu.Items[5] as MenuItem).IsEnabled  = true;
@@ -369,9 +394,9 @@ namespace WLO_Translator_WPF
 
         private void MenuItemAbout_Click(object sender, RoutedEventArgs e)
         {
-            WindowAbout windowAbout = new WindowAbout();
-            windowAbout.Owner = this;
-            windowAbout.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+            WindowAbout windowAbout             = new WindowAbout(mFileManager.ApplicationVersion);
+            windowAbout.Owner                   = this;
+            windowAbout.WindowStartupLocation   = WindowStartupLocation.CenterOwner;
             windowAbout.ShowDialog();
         }
 
@@ -387,13 +412,13 @@ namespace WLO_Translator_WPF
 
         private void MenuItemOpen_Click(object sender, RoutedEventArgs e)
         {
-            ButtonOpenFileToTranslate_Click(sender, e);
+            ButtonOpenTranslationFile_Click(sender, e);
         }
 
         private void MenuItemClose_Click(object sender, RoutedEventArgs e)
         {
             mFileManager.RemoveProjectOpenFileName(ref GridBackgroundProjectFileName);
-            mFileManager.CloseFileToTranslate();
+            mFileManager.CloseFileToTranslateOrGrabTranslationsFrom();
 
             ComboBoxSelectedEncoding.SelectedIndex = 0;
             ClearSearchBarsAndSearchOptions();
@@ -402,26 +427,29 @@ namespace WLO_Translator_WPF
 
         private void MenuItemSave_Click(object sender, RoutedEventArgs e)
         {
-            if (mOpenFileDialog == null)
+            if (mOpenFileDialog == null || mOpenFileDialog.FileName == "")
                 return;
 
-            if (mOpenFileDialog.FileName == "")
+            if (ListBoxStoredItems.Items.OfType<Item>().Any((Item item) => { return item.IsTextBoxesContainingIllegalChars(); }))
+            {
+                MessageBox.Show("Some items contains illegal chars and cannot be saved (text boxes marked red)");
                 return;
+            }
 
-            mFileManager.SaveStoredItemData(mFileManager.FileItemProperties.FileType, ListBoxStoredItems.Items.OfType<IItemBase>().ToList());
+            mFileManager.SaveStoredItemData(FileManager.FileItemProperties.FileType, ListBoxStoredItems.Items.OfType<IItemBase>().ToList());
         }
 
-        private void ButtonAddNewStoredItem_Click(object sender, RoutedEventArgs e)
-        {
-            Item item = new Item(ButtonUpdateItemBasedOnNameLength_Click, ButtonJumpToWholeItem_Click, ButtonJumpToID_Click,
-                ButtonJumpToName_Click, ButtonJumpToDescription_Click, ButtonJumpToExtra1_Click, ButtonJumpToExtra2_Click,
-                mFileManager.FileItemProperties.HasDescription, mFileManager.FileItemProperties.HasExtras);
-            item.NameStartPosition  = scintillaTextBox.SelectionStart;
-            item.NameEndPosition    = scintillaTextBox.SelectionEnd;
-            item.Name               = scintillaTextBox.SelectedText;
-            ItemSearch.AddStoredItem(ref item, ref ListBoxStoredItems);
-            item.Focus();
-        }
+        //private void ButtonAddNewStoredItem_Click(object sender, RoutedEventArgs e)
+        //{
+        //    Item item = new Item(ButtonUpdateItemBasedOnNameLength_Click, ButtonJumpToWholeItem_Click, ButtonJumpToID_Click,
+        //        ButtonJumpToName_Click, ButtonJumpToDescription_Click, ButtonJumpToExtra1_Click, ButtonJumpToExtra2_Click,
+        //        mFileManager.FileItemProperties.HasDescription, mFileManager.FileItemProperties.HasExtras);
+        //    item.NameStartPosition  = scintillaTextBox.SelectionStart;
+        //    item.NameEndPosition    = scintillaTextBox.SelectionEnd;
+        //    item.Name               = scintillaTextBox.SelectedText;
+        //    ItemSearch.AddStoredItem(ref item, ref ListBoxStoredItems);
+        //    item.Focus();
+        //}
 
         private void ButtonClearStoredItems_Click(object sender, RoutedEventArgs e)
         {
@@ -485,12 +513,21 @@ namespace WLO_Translator_WPF
                 item.SetEncoding(unicodeFont, encoding);
         }        
 
+        /// <summary>
+        /// Starts the translation process of the opened file when the button is pressed
+        /// </summary>
         private void ButtonBeginTranslate_Click(object sender, RoutedEventArgs e)
         {
-            if (mFileManager.FileItemProperties == null
+            if (FileManager.FileItemProperties == null
                 || ListBoxFoundItems == null || ListBoxFoundItems.Items.Count == 0
                 || ListBoxStoredItems == null || ListBoxStoredItems.Items.Count == 0)
                 return;
+
+            if (ListBoxStoredItems.Items.OfType<Item>().Any((Item item) => { return item.IsTranslationsTooLong(); }))
+            {
+                MessageBox.Show("Some items have too long translations (text boxes marked gray)");
+                return;
+            }
 
             List<ItemData> foundItemData = new List<ItemData>();
             foreach (Item item in ListBoxFoundItems.Items)
@@ -502,9 +539,10 @@ namespace WLO_Translator_WPF
             _ = BeginTranslateAsync(mFileManager.OpenFileText, foundItemData, storedItemData);
         }
 
+        // Begins the translation process of the opened file by communicating with the Translation class.
         private async Task BeginTranslateAsync(string text, List<ItemData> foundItemData, List<ItemData> storedItemData)
         {
-            var task = await Task.Run(() => Translation.TranslateAsync(text, foundItemData, storedItemData, mFileManager.FileItemProperties));
+            var task = await Task.Run(() => Translation.TranslateAsync(text, foundItemData, storedItemData, FileManager.FileItemProperties));
 
             if (task != null)
             {
@@ -539,14 +577,16 @@ namespace WLO_Translator_WPF
         {
             UpdateVisableItems((ItemSearch.SearchOption)ComboBoxSearchOption.SelectedIndex);
         }
-        private void CheckBoxShowItemsWithoutFirstCharLetter_Click(object sender, RoutedEventArgs e) { UpdateVisableItems(); }
+        private void CheckBoxShowItemsWithoutFirstCharLetter_Click(object sender, RoutedEventArgs e)    { UpdateVisableItems(); }
+        private void CheckBoxShowItemsWithTooLongTranslations_Click(object sender, RoutedEventArgs e)   { UpdateVisableItems(); }
 
         private void UpdateVisableItems(ItemSearch.SearchOption searchOption = ItemSearch.SearchOption.DEFAULT)
         {
-            ItemSearch.UpdateVisableItems(ref ListBoxFoundItems, ref ListBoxStoredItems,
+            ItemSearch.UpdateVisibleItems(ref ListBoxFoundItems, ref ListBoxStoredItems,
                 TextBoxItemSearchBar.Text, CheckBoxShowItemsWithBadChars.IsChecked.Value, CheckBoxShowItemsWithUnusualChars.IsChecked.Value,
                 CheckBoxShowItemsWithoutDescriptions.IsChecked.Value, CheckBoxShowItemsWithSameIDs.IsChecked.Value,
-                CheckBoxShowItemsWithNoMatch.IsChecked.Value, CheckBoxShowItemsWithoutFirstCharLetter.IsChecked.Value, searchOption);
+                CheckBoxShowItemsWithNoMatch.IsChecked.Value, CheckBoxShowItemsWithoutFirstCharLetter.IsChecked.Value,
+                CheckBoxShowItemsWithTooLongTranslations.IsChecked.Value, searchOption);
         }
 
         private void MenuItemExportFile_Click(object sender, RoutedEventArgs e)
@@ -723,12 +763,12 @@ namespace WLO_Translator_WPF
 
         private void ImageProgramIcon_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
-            ContextMenu topBarRightClickMenu        = (ContextMenu)FindResource("TopBarRightClickMenu");
-            UpdateTopBarRightClickMenu(ref topBarRightClickMenu, WindowState);
+            //ContextMenu topBarRightClickMenu        = (ContextMenu)FindResource("TopBarRightClickMenu");
+            //UpdateTopBarRightClickMenu(ref topBarRightClickMenu, WindowState);
 
-            topBarRightClickMenu.PlacementTarget    = (UIElement)sender;
-            topBarRightClickMenu.Placement          = System.Windows.Controls.Primitives.PlacementMode.Bottom;
-            topBarRightClickMenu.IsOpen             = true;
+            //topBarRightClickMenu.PlacementTarget    = (UIElement)sender;
+            //topBarRightClickMenu.Placement          = System.Windows.Controls.Primitives.PlacementMode.Bottom;
+            //topBarRightClickMenu.IsOpen             = true;
         }
 
         enum TopBarRightClickMenuItems
@@ -792,6 +832,6 @@ namespace WLO_Translator_WPF
         private void MenuItemExportStoredItemsAsExcelDocument_Click(object sender, RoutedEventArgs e)
         {
             mFileManager.ExportStoredItemsAsExcelDocument();
-        }
+        }        
     }
 }

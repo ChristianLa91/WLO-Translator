@@ -17,7 +17,7 @@ namespace WLO_Translator_WPF
             InitializeComponent();
 
             OldThemeIndex = ThemeManager.ThemeIndex;
-            ThemeManager.SetThemesToComboBox(ref ComboBoxThemes);
+            ThemeManager.SetThemeNamesToComboBox(ref ComboBoxThemes);
             ComboBoxThemes.SelectedIndex = OldThemeIndex;
             mInitializing = false;
         }

@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:scintilla="clr-namespace:ScintillaNET.WPF;assembly=ScintillaNET.WPF" xmlns:wlo_translator_wpf="clr-namespace:WLO_Translator_WPF"
         mc:Ignorable="d"
-        Title="WLO Translator" Height="900" Width="1600" Icon="Images/Translate.png" WindowStyle="None" BorderBrush="#FF9B9B9B" BorderThickness="1" SizeChanged="WindowMain_SizeChanged">
+        Title="WLO Translator" Height="900" Width="1600" Icon="Images/Translate.png" WindowStyle="None" BorderBrush="#FF9B9B9B" BorderThickness="1" SizeChanged="WindowMain_SizeChanged" Activated="WindowMain_Activated">
     <WindowChrome.WindowChrome>
         <WindowChrome 
         CaptionHeight="{Binding ElementName=MenuMain, Path=Height}"
@@ -208,14 +208,15 @@
                 </Grid>
                 <GridSplitter x:Name="GridSplitterLeft" Grid.Column="1" HorizontalAlignment="Left" Width="10" BorderBrush="#FFF0F0F0" BorderThickness="0" Margin="-5,0,0,0" Background="#00000000"/>
                 <Grid x:Name="GridFrontMiddle" Grid.Column="1" Background="#FFFBFBFB" Margin="5,0">
-                    <GroupBox x:Name="GroupBoxItemSearchOptions" VerticalAlignment="Top" HorizontalAlignment="Left" Width="409" Height="68" Margin="11,2,0,0" Header="Item Search Options" SnapsToDevicePixels="True">
+                    <GroupBox x:Name="GroupBoxItemSearchOptions" VerticalAlignment="Top" HorizontalAlignment="Left" Width="625" Height="68" Margin="11,2,0,0" Header="Item Search Options" SnapsToDevicePixels="True">
                         <Grid Grid.Column="1" Margin="-15,-8,0,0">
                             <CheckBox x:Name="CheckBoxShowItemsWithBadChars" Content="Show items with bad chars" HorizontalAlignment="Left" Margin="14,8,0,0" VerticalAlignment="Top" Click="CheckBoxShowItemsWithBadCharsOnly_Click"/>
                             <CheckBox x:Name="CheckBoxShowItemsWithUnusualChars" Content="Show items with unusual chars" HorizontalAlignment="Left" Margin="14,23,0,0" VerticalAlignment="Top" Click="CheckBoxShowItemsWithUnusualCharsOnly_Click"/>
                             <CheckBox x:Name="CheckBoxShowItemsWithoutDescriptions" Content="Show items without descriptions" HorizontalAlignment="Left" Margin="213,8,0,0" VerticalAlignment="Top" Click="CheckBoxShowItemsWithoutDescriptionsOnly_Click"/>
                             <CheckBox x:Name="CheckBoxShowItemsWithSameIDs" Content="Show items with same IDs" HorizontalAlignment="Left" Margin="252,38,0,-1" VerticalAlignment="Top" Click="CheckBoxShowItemsWithBadCharsOnly_Click"/>
                             <CheckBox x:Name="CheckBoxShowItemsWithNoMatch" Content="Show items with no matching IDs" HorizontalAlignment="Left" Margin="213,23,0,0" VerticalAlignment="Top" Click="CheckBoxShowItemsWithNoMatch_Click" />
-                            <CheckBox x:Name="CheckBoxShowItemsWithoutFirstCharLetter" Content="Show items that don't start with a letter" HorizontalAlignment="Left" Margin="14,38,0,-1" VerticalAlignment="Top" Click="CheckBoxShowItemsWithoutFirstCharLetter_Click" />
+                            <CheckBox x:Name="CheckBoxShowItemsWithoutFirstCharLetter" Content="Show items that don't start with a letter" HorizontalAlignment="Left" Margin="14,38,0,-1" VerticalAlignment="Top" Click="CheckBoxShowItemsWithoutFirstCharLetter_Click"/>
+                            <CheckBox x:Name="CheckBoxShowItemsWithTooLongTranslations" Content="Show items with too long translations" HorizontalAlignment="Left" Margin="409,8,-20,0" VerticalAlignment="Top" Click="CheckBoxShowItemsWithTooLongTranslations_Click"/>
                         </Grid>
                     </GroupBox>
                     <GroupBox x:Name="GroupBoxItem" Width="460" Height="65" VerticalAlignment="Top" Margin="11,68,0,0" Header="Selected Item Options" HorizontalAlignment="Left" SnapsToDevicePixels="True">
@@ -302,7 +303,7 @@
         </Grid>
         <Image x:Name="ImageProgramIcon" Source="Images/Translate Larger Icon.png" Margin="16,6,0,0" Width="30" Height="29" HorizontalAlignment="Left" VerticalAlignment="Top" MouseRightButtonUp="ImageProgramIcon_MouseRightButtonUp" MouseLeftButtonDown="ImageProgramIcon_MouseLeftButtonDown"/>
         <ToolBar x:Name="ToolBarMain" Height="35" Margin="10,32,0,0" VerticalAlignment="Top" Background="#FFF3F3F3" HorizontalAlignment="Left" Width="793" WindowChrome.IsHitTestVisibleInChrome="True">
-            <Button x:Name="ButtonOpenFileToTranslate" HorizontalAlignment="Left" Margin="0,4,0,0" VerticalAlignment="Top" Height="23" Click="ButtonOpenFileToTranslate_Click" Foreground="Black">
+            <Button x:Name="ButtonOpenFileToTranslate" HorizontalAlignment="Left" Margin="0,4,0,0" VerticalAlignment="Top" Height="23" Click="ButtonOpenTranslationFile_Click" Foreground="Black">
                 <Button.Content>
                     <StackPanel Orientation="Horizontal">
                         <Image Source="Images/Open.png"/>

@@ -1,5 +1,8 @@
 ﻿namespace WLO_Translator_WPF
 {
+    /// <summary>
+    /// Simple static class used to store the multi-translator settings, that is the paths to the files that should be translated.
+    /// </summary>
     public static class Settings
     {
         public static string MultiTranslatorItemDataPath        { get; set; } = "";

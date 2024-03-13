@@ -7,15 +7,28 @@ using System.Windows;
 
 namespace WLO_Translator_WPF
 {
+    /// <summary>
+    /// Handles the translation-process of the by the user opened file (or currently opened by the multi-translator).
+    /// </summary>
     static class Translation
     {
-        //private static WindowLoadingBar mWindowLoadingBar;
         private static int              mProgress           = 0;
         private static int              mOldProgress        = 0;
         private static bool             mCancelRequest      = false;
         private static bool             mIsTranslating      = false;
         private static List<ItemData>   mItemsWithoutTranslations;
 
+        private enum TranslateDataType
+        {
+            NAME,
+            DESCRIPTION,
+            EXTRA1,
+            EXTRA2
+        }
+
+        /// <summary>
+        /// Used for specifying substrings for parts of item texts with the corresponding item data positions/indices.
+        /// </summary>
         private class ItemDataPart
         {
             public string   Substring               { get; private set; }
@@ -34,6 +47,11 @@ namespace WLO_Translator_WPF
             }
         }
 
+        /// <summary>
+        /// Asynchronous function that divides the file text that is translated into several tasks/processes that
+        /// each and everyone handles their items text data, translates their part, returns the result back to this function and
+        /// then puts together the fully translated file text and returns the result.
+        /// </summary>
         public static async Task<string> TranslateAsync(string text, List<ItemData> foundItemData, List<ItemData> storedItemData,
             FileItemProperties fileItemProperties, bool isMultiTranslator = false)
         {
@@ -128,16 +146,23 @@ namespace WLO_Translator_WPF
             {
                 if (mOldProgress < mProgress)
                 {
-                    Application.Current.Dispatcher.Invoke(() =>
+                    try
                     {
-                        if (LoadingBarManager.IsLoadingBarNull() || LoadingBarManager.GetDialogResult() == false)
-                            mCancelRequest = true;
-                        else
+                        Application.Current.Dispatcher.Invoke(() =>
                         {
-                            LoadingBarManager.Value = mProgress;
-                            loadingBarValue = LoadingBarManager.Value;
-                        }
-                    });
+                            if (LoadingBarManager.IsLoadingBarNull() || LoadingBarManager.GetDialogResult() == false)
+                                mCancelRequest = true;
+                            else
+                            {
+                                LoadingBarManager.Value = mProgress;
+                                loadingBarValue = LoadingBarManager.Value;
+                            }
+                        });
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e.Message);
+                    }
 
                     if (mCancelRequest)
                         break;
@@ -176,6 +201,11 @@ namespace WLO_Translator_WPF
             return result;
         }
 
+        /// <summary>
+        /// Task (thread) that handles a part of the total text/string of the file that is being translated.
+        /// It uses the ReplaceTextAtPosition-fuction at specific places to fully translate each part of the string that should
+        /// be translated.
+        /// </summary>
         public static string TaskTranslatePartOfString(List<ItemData> foundItemData, List<ItemData> storedItemData, string textPart,
             int textPartStartPosition, int itemToStartFromIndex, int itemsToTranslate, int index)
         {
@@ -195,9 +225,15 @@ namespace WLO_Translator_WPF
 
                 if (storedItem == null)
                 {
-                    mItemsWithoutTranslations.Add(foundItem);
-                    Console.WriteLine("Did not find the item \"" + foundItem.Name + "\" (ID: " + TextManager.GetIDToString(foundItem.ID) +
-                        ") in storedItemData");
+                    if (foundItem != null)
+                    {
+                        mItemsWithoutTranslations.Add(foundItem);
+                        Console.WriteLine("Did not find the item \"" + foundItem.Name + "\" (ID: " + TextManager.GetIDToString(foundItem.ID) +
+                            ") in storedItemData");
+                    }
+                    else
+                        Console.WriteLine("Did not find the item <NULL> in storedItemData");
+
                     ++itemsTranslated;
                     ++mProgress;
                     continue;
@@ -218,8 +254,8 @@ namespace WLO_Translator_WPF
                 //    foundItem.NameStartPosition - textPartStartPosition - TextManager.GetNullsToDecreaseAmount(nameLengthDifference),
                 //    foundItem.NameEndPosition - textPartStartPosition);
 
-                ReplaceTextAtPosition(ref textPart, textPartStartPosition, foundItem.ItemStartPosition, storedItem.NameReversed,
-                    foundItem.Name.Length, foundItem.NameStartPosition, foundItem.NameEndPosition);
+                ReplaceTextAtPosition(ref textPart, textPartStartPosition, ref foundItem, ref storedItem,/*foundItem.ItemStartPosition, storedItem.NameReversed,
+                    foundItem.Name.Length, foundItem.NameStartPosition, foundItem.NameEndPosition,*/ TranslateDataType.NAME);
 
                 if (storedItem.Description != null && storedItem.Description != "")
                 {
@@ -239,9 +275,7 @@ namespace WLO_Translator_WPF
                     //        - TextManager.GetNullsToDecreaseAmount(descriptionLengthDifference),
                     //    foundItem.DescriptionEndPosition - textPartStartPosition);
 
-                    ReplaceTextAtPosition(ref textPart, textPartStartPosition, foundItem.DescriptionLengthPosition,
-                        storedItem.DescriptionReversed, foundItem.Description.Length, foundItem.DescriptionStartPosition,
-                        foundItem.DescriptionEndPosition);
+                    ReplaceTextAtPosition(ref textPart, textPartStartPosition, ref foundItem, ref storedItem, TranslateDataType.DESCRIPTION);
                 }
                 //else
                 //    Console.WriteLine(storedItem.Name + "'s description empty");
@@ -263,9 +297,7 @@ namespace WLO_Translator_WPF
                     //    foundItem.Extra1StartPosition - textPartStartPosition - TextManager.GetNullsToDecreaseAmount(extra1LengthDifference),
                     //    foundItem.Extra1EndPosition - textPartStartPosition);
 
-                    ReplaceTextAtPosition(ref textPart, textPartStartPosition, foundItem.Extra1LengthPosition,
-                        storedItem.Extra1Reversed, foundItem.Extra1.Length, foundItem.Extra1StartPosition,
-                        foundItem.Extra1EndPosition);
+                    ReplaceTextAtPosition(ref textPart, textPartStartPosition, ref foundItem, ref storedItem, TranslateDataType.EXTRA1);
                 }
 
                 if (storedItem.Extra2 != null && storedItem.Extra2 != "")
@@ -285,9 +317,7 @@ namespace WLO_Translator_WPF
                     //    foundItem.Extra2StartPosition - textPartStartPosition - TextManager.GetNullsToDecreaseAmount(extra2LengthDifference),
                     //    foundItem.Extra2EndPosition - textPartStartPosition);
 
-                    ReplaceTextAtPosition(ref textPart, textPartStartPosition, foundItem.Extra2LengthPosition,
-                        storedItem.Extra2Reversed, foundItem.Extra2.Length, foundItem.Extra2StartPosition,
-                        foundItem.Extra2EndPosition);
+                    ReplaceTextAtPosition(ref textPart, textPartStartPosition, ref foundItem, ref storedItem, TranslateDataType.EXTRA2);
                 }
 
                 if (textPartLengthOld != textPart.Length)
@@ -303,22 +333,125 @@ namespace WLO_Translator_WPF
             return textPart;
         }
 
-        private static void ReplaceTextAtPosition(ref string text, int textStartIndex, int lengthStartIndex,
-            string replace, int oldTextLength, int replaceStartIndex, int replaceEndIndex)
+        /// <summary>
+        /// Replaces the found item data text with the stored item data text at the specified positions/indices based on the
+        /// provided data type.
+        /// </summary>
+        //TODO: program so that item names can be moved, in order to make it possible for the item names (in Item.dat at least) to be longer.
+        private static void ReplaceTextAtPosition(ref string text, int textOffset, ref ItemData foundItem, ref ItemData storedItem, /*int lengthStartIndex,
+            string replace, int oldTextLength, int replaceStartIndex, int replaceEndIndex,*/ TranslateDataType translateDataType)
         {
+            int lengthStartIndex, oldTextLength, replaceStartIndex, replaceNextStartIndex = -1, replacePreviousStartIndex = -1, replaceEndIndex;
+            string replace;
+
+            switch (translateDataType)
+            {
+                case TranslateDataType.NAME:
+                    lengthStartIndex            = foundItem.ItemStartPosition;
+                    oldTextLength               = foundItem.NameOriginal.Length;
+                    replaceStartIndex           = foundItem.NameStartPosition;
+                    replaceEndIndex             = foundItem.NameEndPosition;
+                    replace                     = storedItem.NameReversed;
+                    replaceNextStartIndex       = foundItem.DescriptionStartPosition;
+                    break;
+                case TranslateDataType.DESCRIPTION:
+                    lengthStartIndex            = foundItem.DescriptionLengthPosition;
+                    oldTextLength               = foundItem.DescriptionOriginal.Length;
+                    replaceStartIndex           = foundItem.DescriptionStartPosition;
+                    replaceEndIndex             = foundItem.DescriptionEndPosition;
+                    replace                     = storedItem.DescriptionReversed;
+                    replacePreviousStartIndex   = foundItem.NameStartPosition;
+                    replaceNextStartIndex       = foundItem.Extra1StartPosition;
+                    break;
+                case TranslateDataType.EXTRA1:
+                    lengthStartIndex            = foundItem.Extra1LengthPosition;
+                    oldTextLength               = foundItem.Extra1Original.Length;
+                    replaceStartIndex           = foundItem.Extra1StartPosition;
+                    replaceEndIndex             = foundItem.Extra1EndPosition;
+                    replace                     = storedItem.Extra1Reversed;
+                    replacePreviousStartIndex   = foundItem.DescriptionStartPosition;
+                    replaceNextStartIndex       = foundItem.Extra2StartPosition;
+                    break;
+                case TranslateDataType.EXTRA2:
+                    lengthStartIndex            = foundItem.Extra2LengthPosition;
+                    oldTextLength               = foundItem.Extra2Original.Length;
+                    replaceStartIndex           = foundItem.Extra2StartPosition;
+                    replaceEndIndex             = foundItem.Extra2EndPosition;
+                    replace                     = storedItem.Extra2Reversed;
+                    replacePreviousStartIndex   = foundItem.Extra1StartPosition;
+                    break;
+                default:
+                    Console.WriteLine("ERROR: Translate Data Type \"" + translateDataType.ToString() + "\"");
+                    return;
+            }
+
             // Replace length
             string replaceLength = System.Text.Encoding.GetEncoding(1252).GetString(new byte[] { (byte)replace.Length });
-            text = TextManager.GetReplacedPartString(text, replaceLength,
-                lengthStartIndex    - textStartIndex,
-                lengthStartIndex    - textStartIndex + 1);
+            text = TextManager.GetStringWithReplacedPart(text, replaceLength,
+                lengthStartIndex    - textOffset,
+                lengthStartIndex    - textOffset + 1);
+
+            //TODO: Check for nulls available
+            int movementOffset = 0;
+#if DEBUG
+            int nullsLeftOfReplaceStartIndex = TextManager.GetNullsLeftOfIndex(ref text, replaceStartIndex - textOffset);
+
+            int nullsLeftOfNextStartIndex = -1, nullsLeftOfPreviousStartIndex = -1;
+            if (replaceNextStartIndex != -1)
+                nullsLeftOfNextStartIndex    = TextManager.GetNullsLeftOfIndex(ref text, replaceNextStartIndex - textOffset);
+            if (replacePreviousStartIndex != -1)
+                nullsLeftOfPreviousStartIndex = TextManager.GetNullsLeftOfIndex(ref text, replacePreviousStartIndex - textOffset);
+            switch (translateDataType)
+            {
+                case TranslateDataType.NAME:
+                    if (replace.Length - oldTextLength > nullsLeftOfReplaceStartIndex)
+                    {
+                        if (nullsLeftOfReplaceStartIndex + nullsLeftOfNextStartIndex >= replace.Length)
+                        {
+                            movementOffset = replace.Length - oldTextLength - nullsLeftOfReplaceStartIndex;
+                            TextManager.MoveSubstring(ref text, replaceStartIndex - textOffset,
+                                replaceNextStartIndex - textOffset - nullsLeftOfNextStartIndex,
+                                movementOffset);
+                        }
+                        else
+                            Console.WriteLine("Translation Interrupted Due to Error: Occurence(s) of Translations with Too Long Name + Description Together."
+                                + "\nFirst Occurance ID: \"" + TextManager.GetIDToString(storedItem.ID) + "\", Name: \"" + storedItem.Name + "\"");
+                    }
+                    break;
+                case TranslateDataType.DESCRIPTION:
+                    if (replace.Length - oldTextLength > nullsLeftOfReplaceStartIndex)
+                    {
+                        //TODO: Get nulls left for name and use that to move the substring instead of nullsLeftOfNextStartIndex
+                        if (nullsLeftOfReplaceStartIndex + nullsLeftOfPreviousStartIndex >= replace.Length)
+                        {
+                            movementOffset = -(storedItem.Name.Length - foundItem.NameOriginal.Length - nullsLeftOfReplaceStartIndex);
+                            TextManager.MoveSubstring(ref text, foundItem.NameStartPosition - textOffset,
+                                replaceStartIndex - textOffset - nullsLeftOfReplaceStartIndex,
+                                movementOffset);
+                        }
+                        else
+                            Console.WriteLine("Translation Interrupted Due to Error: Occurence(s) of Translations with Too Long Name + Description Together."
+                                + "\nFirst Occurance ID: \"" + TextManager.GetIDToString(storedItem.ID) + "\", Name: \"" + storedItem.Name + "\"");
+                    }
+                    break;
+            }
+#endif
 
             // Replace text
             int lengthDifference = oldTextLength - replace.Length;
-            text = TextManager.GetReplacedPartString(text, TextManager.GetNullStringOfLength(lengthDifference) + replace,
-                replaceStartIndex   - textStartIndex - TextManager.GetNullsToDecreaseAmount(lengthDifference),
-                replaceEndIndex     - textStartIndex);
+            int offsetToAdd = 0;
+
+            //if (storedItem.Name.Length - foundItem.NameOriginal.Length > nullsLeftOfPreviousStartIndex &&
+            //    translateDataType == TranslateDataType.DESCRIPTION)
+            //    offsetToAdd = storedItem.Name.Length - foundItem.NameOriginal.Length - nullsLeftOfPreviousStartIndex;
+            text = TextManager.GetStringWithReplacedPart(text, TextManager.GetNullStringOfLength(lengthDifference) + replace,
+                replaceStartIndex   - textOffset + offsetToAdd - TextManager.GetNullsToDecreaseAmount(lengthDifference) + movementOffset,
+                replaceEndIndex     - textOffset + offsetToAdd + movementOffset);
         }
 
+        /// <summary>
+        /// Returns the items that couldn't be translated, which are grabbed by the multi-translator and listed there.
+        /// </summary>
         public static List<ItemData> GetItemsWithoutTranslations()
         {
             return mItemsWithoutTranslations;

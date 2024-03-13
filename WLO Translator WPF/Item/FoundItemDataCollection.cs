@@ -2,6 +2,9 @@
 
 namespace WLO_Translator_WPF
 {
+    /// <summary>
+    /// Used for helping the FileManager translate the individual found items by collecting data in steps.
+    /// </summary>
     public class FoundItemDataCollection
     {
         private ItemData            mItem;
@@ -34,6 +37,10 @@ namespace WLO_Translator_WPF
             DataCollectionState = DataCollectionStates.NAME_LENGTH;
         }
 
+        /// <summary>
+        /// Collects the data from the start- to the end index based on the offset for the ID
+        /// and on the current state of the data collection.
+        /// </summary>
         public ItemData CollectData(int startIndex, int endIndex, int idOffset)
         {
             int itemStartPosition = -1, itemExtra1LengthPosition = -1, itemExtra2LengthPosition = -1;
@@ -115,6 +122,9 @@ namespace WLO_Translator_WPF
             return null;
         }
 
+        /// <summary>
+        /// Collects and stores the name length, that is the same as the start position of the item
+        /// </summary>
         public void CollectNameLength(int i)
         {
             if (DataCollectionState != DataCollectionStates.NAME_LENGTH)
@@ -125,6 +135,9 @@ namespace WLO_Translator_WPF
             DataCollectionState = DataCollectionStates.NAME_AND_ID;
         }
 
+        /// <summary>
+        /// Collects and stores the name and the id of the item
+        /// </summary>
         public ItemData CollectFindNameAndID(ref int index, int idOffset)
         {
             if (DataCollectionState != DataCollectionStates.NAME_AND_ID)
@@ -159,6 +172,9 @@ namespace WLO_Translator_WPF
             }
         }
 
+        /// <summary>
+        /// Collects and stores the description length of the item based on the given index
+        /// </summary>
         public void CollectDescriptionLength(ref int index)
         {
             if (DataCollectionState != DataCollectionStates.DESCRIPTION_LENGTH)
@@ -181,6 +197,9 @@ namespace WLO_Translator_WPF
             DataCollectionState = DataCollectionStates.DESCRIPTION;
         }
 
+        /// <summary>
+        /// Collects and stores the description of the item based on the given index
+        /// </summary>
         public ItemData CollectDescription(ref int index)
         {
             if (DataCollectionState != DataCollectionStates.DESCRIPTION)
@@ -195,17 +214,20 @@ namespace WLO_Translator_WPF
 
             if (mFileItemProperties.FileType != FileType.MARK)
             {
-                DataCollectionState = DataCollectionStates.NAME_LENGTH;
-                mItem.ItemEndPosition = index;
+                DataCollectionState     = DataCollectionStates.NAME_LENGTH;
+                mItem.ItemEndPosition   = index;
                 return mItem;
             }
             else
             {
-                DataCollectionState = DataCollectionStates.EXTRA1_LENGTH;
+                DataCollectionState     = DataCollectionStates.EXTRA1_LENGTH;
                 return null;
             }
         }
 
+        /// <summary>
+        /// Collects and stores the extra1 length of the item based on the given index
+        /// </summary>
         public void CollectExtra1Length(int index)
         {
             if (DataCollectionState != DataCollectionStates.EXTRA1_LENGTH)
@@ -215,6 +237,9 @@ namespace WLO_Translator_WPF
             DataCollectionState = DataCollectionStates.EXTRA1;
         }
 
+        /// <summary>
+        /// Collects and stores the extra1 of the item based on the given index, updates the index
+        /// </summary>
         public void CollectExtra1(ref int index)
         {
             if (DataCollectionState != DataCollectionStates.EXTRA1)
@@ -231,6 +256,9 @@ namespace WLO_Translator_WPF
             DataCollectionState = DataCollectionStates.EXTRA2_LENGTH;
         }
 
+        /// <summary>
+        /// Collects and stores the extra2's length of the item based on the given index, updates the index
+        /// </summary>
         public void CollectExtra2Length(ref int index)
         {
             if (DataCollectionState != DataCollectionStates.EXTRA2_LENGTH)
@@ -253,6 +281,9 @@ namespace WLO_Translator_WPF
             DataCollectionState = DataCollectionStates.EXTRA2;
         }
 
+        /// <summary>
+        /// Collects and stores the extra2 of the item based on the given index, updates the index
+        /// </summary>
         public ItemData CollectExtra2(ref int index)
         {
             if (DataCollectionState != DataCollectionStates.EXTRA2)
@@ -272,13 +303,32 @@ namespace WLO_Translator_WPF
 
         /* Store data in item */
 
-        private void StoreDataIntoItem(ref ItemData item, int startPosition, int length,
+        /// <summary>
+        /// Stores the gathered data into the ItemData based on the provided data collection state
+        /// </summary>
+        private void StoreDataIntoItem(ref ItemData itemData, int startPosition, int length,
             DataCollectionStates dataCollectionState, bool dataFromRightToLeft)
         {
-            // Get the item data
+            // Get the specific item data
             string data = "";
             for (int j = startPosition; j < startPosition + length; ++j)
                 data += (char)mBytes[j];
+
+            // Clean the specific item data from bad chars
+            data = TextManager.CleanStringFromNewLinesAndBadChars(data);
+
+            // Get length of whole item
+            int wholeItemLength = mFileItemProperties.LengthPerItem;
+            if (mFileItemProperties.FileType == FileType.MARK)
+                wholeItemLength *= 2;
+
+            if (itemData.ItemStartPosition + wholeItemLength > mBytes.Length)
+                wholeItemLength = mBytes.Length - itemData.ItemStartPosition;
+
+            // Get whole the item data
+            string wholeItemData = "";
+            for (int j = itemData.ItemStartPosition; j < itemData.ItemStartPosition + wholeItemLength; ++j)
+                wholeItemData += (char)mBytes[j];
 
             // Clean the item data from bad chars
             data = TextManager.CleanStringFromNewLinesAndBadChars(data);
@@ -287,59 +337,73 @@ namespace WLO_Translator_WPF
             {
                 case DataCollectionStates.NAME_AND_ID:
                     if (dataFromRightToLeft)
-                        item.NameReversed           = data;
+                        itemData.NameReversed           = data;
                     else
-                        item.Name                   = data;
-                    item.NameStartPosition          = startPosition;
-                    item.NameEndPosition            = startPosition + length;
+                        itemData.Name                   = data;
+                    itemData.NameStartPosition          = startPosition;
+                    itemData.NameEndPosition            = startPosition + length;
+                    itemData.NameNullsLeft              = TextManager.GetNullsLeftOfIndex(ref wholeItemData,
+                        itemData.NameStartPosition - itemData.ItemStartPosition);
                     break;
                 case DataCollectionStates.DESCRIPTION:
                     if (dataFromRightToLeft)
-                        item.DescriptionReversed    = data;
+                        itemData.DescriptionReversed    = data;
                     else
-                        item.Description            = data;
-                    item.DescriptionStartPosition   = startPosition;
-                    item.DescriptionEndPosition     = startPosition + length;
+                        itemData.Description            = data;
+                    itemData.DescriptionStartPosition   = startPosition;
+                    itemData.DescriptionEndPosition     = startPosition + length;
+                    itemData.DescriptionNullsLeft       = TextManager.GetNullsLeftOfIndex(ref wholeItemData,
+                        itemData.DescriptionStartPosition   - itemData.ItemStartPosition,
+                        itemData.NameEndPosition            - itemData.ItemStartPosition);
                     break;
                 case DataCollectionStates.EXTRA1:
                     if (dataFromRightToLeft)
-                        item.Extra1Reversed         = data;
+                        itemData.Extra1Reversed         = data;
                     else
-                        item.Extra1                 = data;
-                    item.Extra1StartPosition        = startPosition;
-                    item.Extra1EndPosition          = startPosition + length;
+                        itemData.Extra1                 = data;
+                    itemData.Extra1StartPosition        = startPosition;
+                    itemData.Extra1EndPosition          = startPosition + length;
+                    itemData.Extra1NullsLeft            = TextManager.GetNullsLeftOfIndex(ref wholeItemData,
+                        itemData.Extra1StartPosition    - itemData.ItemStartPosition,
+                        itemData.DescriptionEndPosition - itemData.ItemStartPosition);
                     break;
                 case DataCollectionStates.EXTRA2:
                     if (dataFromRightToLeft)
-                        item.Extra2Reversed         = data;
+                        itemData.Extra2Reversed         = data;
                     else
-                        item.Extra2                 = data;
-                    item.Extra2StartPosition        = startPosition;
-                    item.Extra2EndPosition          = startPosition + length;
+                        itemData.Extra2                 = data;
+                    itemData.Extra2StartPosition        = startPosition;
+                    itemData.Extra2EndPosition          = startPosition + length;
+                    itemData.Extra2NullsLeft            = TextManager.GetNullsLeftOfIndex(ref wholeItemData,
+                        itemData.Extra1StartPosition    - itemData.ItemStartPosition,
+                        itemData.Extra2EndPosition      - itemData.ItemStartPosition);
                     break;
             }
         }
 
-        private void StoreIDDataIntoItem(ref ItemData item, int idOffset)
+        /// <summary>
+        /// Stores ID into ItemData based on the given ID-offset.
+        /// </summary>
+        private void StoreIDDataIntoItem(ref ItemData itemData, int idOffset)
         {
             // Extract the item ID
             int nameEndPositionWithOffset;
             if (mFileItemProperties.FileType == FileType.ACTIONINFO)
-                nameEndPositionWithOffset = item.ItemStartPosition  + idOffset;
+                nameEndPositionWithOffset = itemData.ItemStartPosition  + idOffset;
             else
-                nameEndPositionWithOffset = item.NameEndPosition    + idOffset;
+                nameEndPositionWithOffset = itemData.NameEndPosition    + idOffset;
 
             while (mBytes.Length <= nameEndPositionWithOffset + 2)
                 nameEndPositionWithOffset--;
 
-            item.ID = new int[]
+            itemData.ID = new int[]
             {
                 mBytes[nameEndPositionWithOffset    ],
                 mBytes[nameEndPositionWithOffset + 1],
                 mBytes[nameEndPositionWithOffset + 2]
             };
-            item.IDStartPosition = nameEndPositionWithOffset;
-            item.IDEndPosition   = nameEndPositionWithOffset + 2;
+            itemData.IDStartPosition = nameEndPositionWithOffset;
+            itemData.IDEndPosition   = nameEndPositionWithOffset + 2;
         }
     }
 }

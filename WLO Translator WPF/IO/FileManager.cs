@@ -31,6 +31,10 @@ namespace WLO_Translator_WPF
         TALK        
     }
 
+    /// <summary>
+    /// FileItemProperties is a class that is used to store properties about the opened file;
+    /// such as file type (Item.dat, SkillData.dat, Talk.dat, etc.), item data lenght, etc.
+    /// </summary>
     public class FileItemProperties
     {
         public FileType FileType                        { get; private set; } = FileType.NULL;
@@ -46,6 +50,9 @@ namespace WLO_Translator_WPF
             UpdateProperties();
         }
 
+        /// <summary>
+        /// Updates the file item properties
+        /// </summary>
         private void UpdateProperties()
         {
             switch (FileType)
@@ -92,14 +99,23 @@ namespace WLO_Translator_WPF
         }
     }
 
+    /// <summary>
+    /// FileManager handles the IO/storing and loading of item data from and to files.
+    /// It handles the crucial job of item creation/instantiation and iteration through
+    /// the game files with help of the FoundItemDataCollection class.
+    /// Files are saved and loaded in XML-format. Implementations of database-solution with SQL has been begun,
+    /// but it is still a solution for future implementation.
+    /// </summary>
     public class FileManager
     {
+        #region Fields
+
         private BackgroundWorker            mBackgroundWorkerStoredItemData;
         private BackgroundWorker            mBackgroundWorkerFoundItemData;
         private List<ItemData>              mFoundItemsToAdd;
         private List<ItemData>              mStoredItemsToAdd;
-        public List<ItemData> GetFoundItems()   { return mFoundItemsToAdd;  }
-        public List<ItemData> GetStoredItems()  { return mStoredItemsToAdd; }
+        public  List<ItemData>              GetFoundItems()     { return mFoundItemsToAdd; }
+        public  List<ItemData>              GetStoredItems()    { return mStoredItemsToAdd; }
 
         private ListBox                     mListBoxFoundItems;
         private ListBox                     mListBoxStoredItems;
@@ -120,35 +136,61 @@ namespace WLO_Translator_WPF
 
         private string                      mOpenFileText;
         private byte[]                      mOpenFileData;
-        public  string                      OpenFileText { get => mOpenFileText; private set => mOpenFileText = value; }
+
+        private Label                       mLabelReportInfo;
+
+        #endregion
+
+        #region Properties
+
+        public string                      OpenFileText        { get => mOpenFileText; private set => mOpenFileText = value; }
 
 
         private string                      mTranslatedFileText;
         public  string                      TranslatedFileText { get => mTranslatedFileText; set => mTranslatedFileText = value; }
 
-        public  FileItemProperties          FileItemProperties { get; private set; }
+        public  static FileItemProperties    FileItemProperties                     { get; private set; }
 
-        public  FileType                    LoadedFileName { get; private set; } = FileType.NULL;
+        public  FileType                    LoadedFileName                          { get; private set; } = FileType.NULL;
 
         //private Database                    mDatabase;
 
-        public  bool                        IsFileOpenToTranslateRunning            { get; private set; } = false;
-        //private bool                        IsFoundItemDataCollectionCompleted      { get; set;         } = false;
-        private bool                        IsStoredItemDataToItemsProcessRunning   { get; set;         } = false;
+        public  bool                        IsFileOpenToTranslateRunning            { get; private set; }   = false;
+        private bool                        IsStoredItemDataToItemsProcessRunning   { get; set; }           = false;
 
-        private Label                       mLabelReportInfo;
 
-        // <summary>
-        // Provides utility methods for suspending and resuming the UI update of a ListBox in WPF.
-        // </summary>
+        public  string                      ApplicationVersion                      { get; private set; }
+        private bool                        IsSorted                                { get; set; } = true;
+
+        #endregion
+
+        /// <summary>
+        /// Returns if the What's New Window should be shown
+        /// </summary>
+        public bool ShowWhatsNew()
+        {
+            string currentVersion = GetCurrentApplicationVersion();
+            if (currentVersion != ApplicationVersion)
+            {
+                ApplicationVersion = currentVersion;
+                SaveProgramSettings();
+                return true;
+            }
+            else
+                return false;
+        }
+
+        /// <summary>
+        /// Provides utility methods for suspending and resuming the UI update of a ListBox in WPF.
+        /// </summary>
         public static class ListBoxUpdateSuspender
         {
-            // <summary>
-            // Suspends the UI update of a ListBox.
-            //
-            // Parameters:
-            // - listBox: The ListBox control whose UI update needs to be suspended.
-            // </summary>
+            /// <summary>
+            /// Suspends the UI update of a ListBox.
+            ///
+            /// Parameters:
+            /// - listBox: The ListBox control whose UI update needs to be suspended.
+            /// </summary>
             public static void SuspendUpdate(ListBox listBox)
             {
                 // Get the handle of the ListBox control.
@@ -158,12 +200,12 @@ namespace WLO_Translator_WPF
                 SendMessage(handle, WM_SETREDRAW, IntPtr.Zero, IntPtr.Zero);
             }
 
-            // <summary>
-            // Resumes the UI update of a ListBox.
-            //
-            // Parameters:
-            // - listBox: The ListBox control whose UI update needs to be resumed.
-            // </summary>
+            /// <summary>
+            /// Resumes the UI update of a ListBox.
+            ///
+            /// Parameters:
+            /// - listBox: The ListBox control whose UI update needs to be resumed.
+            /// </summary>
             public static void ResumeUpdate(ListBox listBox)
             {
                 // Get the handle of the ListBox control.
@@ -176,27 +218,27 @@ namespace WLO_Translator_WPF
                 listBox.InvalidateVisual();
             }
 
-            // <summary>
-            // Sends a message to a window or control.
-            //
-            // Parameters:
-            // - hWnd: The handle to the window or control.
-            // - msg: The message to send.
-            // - wParam: Additional message-specific information.
-            // - lParam: Additional message-specific information.
-            //
-            // Returns:
-            // - The result of the message processing; it depends on the message sent.
-            // </summary>
+            /// <summary>
+            /// Sends a message to a window or control.
+            ///
+            /// Parameters:
+            /// - hWnd: The handle to the window or control.
+            /// - msg: The message to send.
+            /// - wParam: Additional message-specific information.
+            /// - lParam: Additional message-specific information.
+            ///
+            /// Returns:
+            /// - The result of the message processing; it depends on the message sent.
+            /// </summary>
             [DllImport("user32.dll")]
             private static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
 
             private const int WM_SETREDRAW = 0x000B;
         }
 
-        // Save File Dialog
-        //private static SaveFileDialog mSaveFileDialog = new SaveFileDialog();
-
+        /// <summary>
+        /// Constructs and initializes the FileManager.
+        /// </summary>
         public FileManager(Dispatcher mainWindowDispatcher, ref ScintillaWPF scintillaWPFTextBox, ref Label labelReportInto,
             ref ListBox listBoxFoundItems, ref ListBox listBoxStoredItems,
             RoutedEventHandler routedEventHandlerButtonClickUpdateItem, RoutedEventHandler routedEventHandlerButtonClickJumpToWholeItem,
@@ -234,7 +276,21 @@ namespace WLO_Translator_WPF
             Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
         }
 
-        public void SaveProgramSettings()
+        /// <summary>
+        /// Returns the current application version with the data extracted from the current executing assembly.
+        /// </summary>
+        private string GetCurrentApplicationVersion()
+        {
+            System.Reflection.Assembly assembly = System.Reflection.Assembly.GetExecutingAssembly();
+            string assemblyVersion = System.Reflection.AssemblyName.GetAssemblyName(assembly.Location).Version.ToString();
+            return assemblyVersion;
+        }
+
+        /// <summary>
+        /// Saves the program settings to the Paths.ProgramSettingsPath.
+        /// It stores things like general settings, selected theme and multi-translator paths into and xml-file.
+        /// </summary>
+        public  void SaveProgramSettings()
         {
             if (!File.Exists(Paths.ProgramSettingsPath))
             {
@@ -244,14 +300,21 @@ namespace WLO_Translator_WPF
                 fileStream.Close();
             }
 
-            XmlWriterSettings settings  = new XmlWriterSettings();
-            settings.Indent             = true;
-            settings.IndentChars        = "\t";
-            XmlWriter writer            = XmlWriter.Create(Paths.ProgramSettingsPath, settings);
+            XmlWriterSettings settings = new XmlWriterSettings();
+            settings.Indent = true;
+            settings.IndentChars = "\t";
+            XmlWriter writer = XmlWriter.Create(Paths.ProgramSettingsPath, settings);
 
             try
             {
                 writer.WriteStartElement("ProgramSettings");
+
+                    writer.WriteStartElement("GeneralSettings");
+                                        
+                        string version = GetCurrentApplicationVersion();
+                        writer.WriteAttributeString("Version", version);
+
+                    writer.WriteEndElement();
 
                     writer.WriteStartElement("SelectedTheme");
 
@@ -280,7 +343,11 @@ namespace WLO_Translator_WPF
             writer.Close();
         }
 
-        public void LoadProgramSettings()
+        /// <summary>
+        /// Saves the program settings to the Paths.ProgramSettingsPath.
+        /// It stores things like general settings, selected theme and multi-translator paths into and xml-file.
+        /// </summary>
+        public  void LoadProgramSettings()
         {
             // Load program settings, if file exists
             if (File.Exists(Paths.ProgramSettingsPath))
@@ -292,6 +359,12 @@ namespace WLO_Translator_WPF
                 {
                     while (reader.Read())
                     {
+                        if (reader.Name == "GeneralSettings")
+                        {
+                            if (reader.GetAttribute("Version") != null)
+                                ApplicationVersion = reader.GetAttribute("Version");
+                        }
+
                         if (reader.Name == "SelectedTheme")
                         {
                             if (reader.GetAttribute("Index") != null)
@@ -329,12 +402,10 @@ namespace WLO_Translator_WPF
         }
 
         /// <summary>
-        /// Saves the associated stored item data
+        /// Saves the associated stored item data into an XML-file. This is the data meant to hold all the
+        /// translations of the already translated files.
         /// </summary>
-        /// <param name="filePath"></param>
-        /// <param name="storedItems"></param>
-        /// <param name="labelSaved"></param>
-        public void SaveStoredItemData(FileType fileName, List<IItemBase> storedItems)
+        public  void SaveStoredItemData(FileType fileName, List<IItemBase> storedItems)
         {
             string saveFilePath = Paths.AssociatedStoredItemData + TextManager.GetFileTypeToString(fileName);
             string saveFilePathWithExtension = saveFilePath + Constants.FILE_ENDING_STORED_ITEM_DATA;
@@ -346,53 +417,53 @@ namespace WLO_Translator_WPF
                 fileStream.Close();
             }
 
-            XmlWriterSettings settings  = new XmlWriterSettings();
-            settings.Indent             = true;
-            settings.IndentChars        = "\t";
-            XmlWriter writer            = XmlWriter.Create(saveFilePathWithExtension, settings);
+            XmlWriterSettings settings = new XmlWriterSettings();
+            settings.Indent = true;
+            settings.IndentChars = "\t";
+            XmlWriter writer = XmlWriter.Create(saveFilePathWithExtension, settings);
 
             try
             {
                 writer.WriteStartElement("AssociatedStoredItemData");
 
-                    writer.WriteStartElement("Items");
+                writer.WriteStartElement("Items");
 
-                        writer.WriteAttributeString("ItemCount", storedItems.Count.ToString());
+                writer.WriteAttributeString("ItemCount", storedItems.Count.ToString());
 
-                        for (int i = 0; i < storedItems.Count; i++)
-                        {
-                            IItemBase currentItem = storedItems[i];
+                for (int i = 0; i < storedItems.Count; i++)
+                {
+                    IItemBase currentItem = storedItems[i];
 
-                            writer.WriteStartElement("Item");
+                    writer.WriteStartElement("Item");
 
-                                // Ints and strings
-                                writer.WriteAttributeString("ID1",                      currentItem.ID[0].ToString());
-                                writer.WriteAttributeString("ID2",                      currentItem.ID[1].ToString());
-                                writer.WriteAttributeString("ID3",                      currentItem.ID[2].ToString());
-                                writer.WriteAttributeString("Name",                     currentItem.Name);
-                                writer.WriteAttributeString("Description",              currentItem.Description);
-                                writer.WriteAttributeString("Extra1",                   currentItem.Extra1);
-                                writer.WriteAttributeString("Extra2",                   currentItem.Extra2);
-                                
-                                // Positions
-                                writer.WriteAttributeString("ItemStartPosition",        currentItem.ItemStartPosition.ToString());
-                                writer.WriteAttributeString("ItemEndPosition",          currentItem.ItemEndPosition.ToString());
-                                writer.WriteAttributeString("IDStartPosition",          currentItem.IDStartPosition.ToString());
-                                writer.WriteAttributeString("IDEndPosition",            currentItem.IDEndPosition.ToString());
-                                writer.WriteAttributeString("NameStartPosition",        currentItem.NameStartPosition.ToString());
-                                writer.WriteAttributeString("NameEndPosition",          currentItem.NameEndPosition.ToString());
-                                writer.WriteAttributeString("DescriptionStartPosition", currentItem.DescriptionStartPosition.ToString());
-                                writer.WriteAttributeString("DescriptionEndPosition",   currentItem.DescriptionEndPosition.ToString());
-                                
-                                writer.WriteAttributeString("Extra1StartPosition",      currentItem.Extra1StartPosition.ToString());
-                                writer.WriteAttributeString("Extra1EndPosition",        currentItem.Extra1EndPosition.ToString());
-                                writer.WriteAttributeString("Extra2StartPosition",      currentItem.Extra2StartPosition.ToString());
-                                writer.WriteAttributeString("Extra2EndPosition",        currentItem.Extra2EndPosition.ToString());
+                    // Ints and strings
+                    writer.WriteAttributeString("ID1", currentItem.ID[0].ToString());
+                    writer.WriteAttributeString("ID2", currentItem.ID[1].ToString());
+                    writer.WriteAttributeString("ID3", currentItem.ID[2].ToString());
+                    writer.WriteAttributeString("Name", currentItem.Name);
+                    writer.WriteAttributeString("Description", currentItem.Description);
+                    writer.WriteAttributeString("Extra1", currentItem.Extra1);
+                    writer.WriteAttributeString("Extra2", currentItem.Extra2);
 
-                            writer.WriteEndElement();
-                        }
+                    // Positions
+                    writer.WriteAttributeString("ItemStartPosition", currentItem.ItemStartPosition.ToString());
+                    writer.WriteAttributeString("ItemEndPosition", currentItem.ItemEndPosition.ToString());
+                    writer.WriteAttributeString("IDStartPosition", currentItem.IDStartPosition.ToString());
+                    writer.WriteAttributeString("IDEndPosition", currentItem.IDEndPosition.ToString());
+                    writer.WriteAttributeString("NameStartPosition", currentItem.NameStartPosition.ToString());
+                    writer.WriteAttributeString("NameEndPosition", currentItem.NameEndPosition.ToString());
+                    writer.WriteAttributeString("DescriptionStartPosition", currentItem.DescriptionStartPosition.ToString());
+                    writer.WriteAttributeString("DescriptionEndPosition", currentItem.DescriptionEndPosition.ToString());
+
+                    writer.WriteAttributeString("Extra1StartPosition", currentItem.Extra1StartPosition.ToString());
+                    writer.WriteAttributeString("Extra1EndPosition", currentItem.Extra1EndPosition.ToString());
+                    writer.WriteAttributeString("Extra2StartPosition", currentItem.Extra2StartPosition.ToString());
+                    writer.WriteAttributeString("Extra2EndPosition", currentItem.Extra2EndPosition.ToString());
 
                     writer.WriteEndElement();
+                }
+
+                writer.WriteEndElement();
 
                 writer.WriteEndElement();
             }
@@ -405,11 +476,10 @@ namespace WLO_Translator_WPF
 
             mLabelReportInfo.Content = TextManager.GetFileTypeToString(fileName) + " Stored Items " + " Saved";
         }
+
         /// <summary>
         /// Loads the associated stored item data
         /// </summary>
-        /// <param name="fileName"></param>
-        /// <param name="isMultiTranslator"></param>
         private void LoadStoredItemData(string fileName, bool isMultiTranslator)
         {
             string savefilePath = Paths.AssociatedStoredItemData + Path.GetFileNameWithoutExtension(fileName)
@@ -507,9 +577,34 @@ namespace WLO_Translator_WPF
                             if (reader.GetAttribute("Extra2EndPosition") != null)
                                 currentItemData.Extra2EndPosition = int.Parse(reader.GetAttribute("Extra2EndPosition"));
 
+                            // Get nulls left
+                            if (isMultiTranslator)
+                            {
+                                ItemData foundItemData = mFoundItemsToAdd.FirstOrDefault((ItemData itemFound) =>
+                                {
+                                    return Item.CompareIDs(itemFound.ID, currentItemData.ID);
+                                });
+
+                                if (currentItemData != null)
+                                    ItemManager.SetNullLength(foundItemData, currentItemData);
+                            }
+                            else
+                            {
+                                mDispatcher.Invoke(() =>
+                                {
+                                    Item foundItem = mItemSourceListBoxFoundItemsTemporary.FirstOrDefault((Item itemFound) =>
+                                    {
+                                        return Item.CompareIDs(itemFound.ID, currentItemData.ID);
+                                    });
+
+                                    if (foundItem != null)
+                                        ItemManager.SetNullLength(foundItem, currentItemData);
+                                });
+                            }
+
                             storedItemsToAdd.Add(currentItemData);
 
-                            if (lastReportedTime.AddSeconds(0.1) < DateTime.Now)
+                            if (lastReportedTime.AddSeconds(0.5) < DateTime.Now)
                             {
                                 progress += storedItemsToAdd.Count;
                                 ReportProgress(ref storedItemsToAdd, (int)progress, isMultiTranslator, true);
@@ -534,15 +629,21 @@ namespace WLO_Translator_WPF
             else
             {
                 Console.WriteLine("Currently no stored items file at: \"" + savefilePath);
-                FinishOpeningFileToTranslate(isMultiTranslator);
+                FinishOpeningTranslationFile(isMultiTranslator);
             }
         }
 
-        public bool OpenFileToTranslate(string filePath, bool isMultiTranslator = false)
+        /// <summary>
+        /// The start of the opening/loading of the file which is to be translated, or the translations are to be
+        /// translated from. This process uses multi-threading to speed up the process. Still have some performance issues,
+        /// but is faster than it was before multi-threading.
+        /// </summary>
+        public  bool OpenTranslationFile(string filePath, bool isMultiTranslator = false)
         {
-            IsFileOpenToTranslateRunning            = true;
+            IsFileOpenToTranslateRunning = true;
             //IsFoundItemDataCollectionCompleted      = false;
-            IsStoredItemDataToItemsProcessRunning   = false;
+            IsStoredItemDataToItemsProcessRunning = false;
+            IsSorted = true;
 
             if (mBackgroundWorkerFoundItemData != null)
             {
@@ -573,7 +674,7 @@ namespace WLO_Translator_WPF
                     break;
                 case "skill":
                     LoadedFileName = FileType.SKILL;
-                    break;                              
+                    break;
                 case "talk":
                     LoadedFileName = FileType.TALK;
                     break;
@@ -586,7 +687,7 @@ namespace WLO_Translator_WPF
 
             // Load in text from file
             string fileText = File.ReadAllText(filePath, Encoding.GetEncoding(1252));
-            mOpenFileText   = fileText;
+            mOpenFileText = fileText;
 
             // Set file text to the Scintilla text box file viewer
             if (!isMultiTranslator)
@@ -616,15 +717,20 @@ namespace WLO_Translator_WPF
             // Extract item data from the loaded file
             mBackgroundWorkerFoundItemData = new BackgroundWorker(); // () => ThreadOpenFileToTranslate(fileName)
             mBackgroundWorkerFoundItemData.WorkerReportsProgress = true;
-            mBackgroundWorkerFoundItemData.DoWork             += BackgroundWorkerFoundItemData_DoWork;
-            mBackgroundWorkerFoundItemData.ProgressChanged    += BackgroundWorkerFoundItemData_ProgressChanged;
+            mBackgroundWorkerFoundItemData.DoWork += BackgroundWorkerFoundItemData_DoWork;
+            mBackgroundWorkerFoundItemData.ProgressChanged += BackgroundWorkerFoundItemData_ProgressChanged;
             mBackgroundWorkerFoundItemData.RunWorkerCompleted += BackgroundWorkerFoundItemData_RunWorkerCompleted;
             mBackgroundWorkerFoundItemData.RunWorkerAsync(new object[] { filePath, isMultiTranslator });
-            
-            return true;
-        }        
 
-        #region Background worker found item data
+            return true;
+        }
+
+        #region Background Worker Found Item Data
+
+        /// <summary>
+        /// The work-function for the found-itemdata collection's background worker.
+        /// Thread used for work and reporting progress to loading bar.
+        /// </summary>
         private void BackgroundWorkerFoundItemData_DoWork(object sender, DoWorkEventArgs e)
         {
             Thread.Sleep(250);
@@ -638,10 +744,13 @@ namespace WLO_Translator_WPF
             e.Result = new object[] { fileName, isMultiTranslator };
         }
 
+        /// <summary>
+        /// Class that is used to store the indices for parts of the data that is collected
+        /// </summary>
         private class ItemDataPart
         {
-            public int StartIndex   { get; private set; }
-            public int EndIndex     { get; private set; }
+            public int StartIndex { get; private set; }
+            public int EndIndex { get; private set; }
 
             public ItemDataPart(int startIndex, int endIndex)
             {
@@ -650,6 +759,9 @@ namespace WLO_Translator_WPF
             }
         }
 
+        /// <summary>
+        /// Task (thread) function that asynchronically handles the found item data collection.
+        /// </summary>
         public async Task CollectFoundItemDataAsync(string fileName, bool isMultiTranslator)
         {
             Thread.Sleep(50);
@@ -677,18 +789,18 @@ namespace WLO_Translator_WPF
             {
                 case FileType.ACTIONINFO:
                     startOffset = FileItemProperties.LengthPerItem + Constants.ACTIONINFO_DATA_INITIAL_OFFSET;
-                    idOffset    = Constants.ACTIONINFO_DATA_ID_OFFSET;
+                    idOffset = Constants.ACTIONINFO_DATA_ID_OFFSET;
                     break;
                 case FileType.ALOGINEXE:
                     startOffset = 0;
                     break;
                 case FileType.SCENEDATA:
                     startOffset = FileItemProperties.LengthPerItem + Constants.SCENEDATA_DATA_INITIAL_OFFSET;
-                    idOffset    = Constants.SCENEDATA_DATA_ID_OFFSET;
+                    idOffset = Constants.SCENEDATA_DATA_ID_OFFSET;
                     break;
                 case FileType.TALK:
                     startOffset = FileItemProperties.LengthPerItem + Constants.TALK_DATA_INITIAL_OFFSET;
-                    idOffset    = Constants.TALK_DATA_ID_OFFSET;
+                    idOffset = Constants.TALK_DATA_ID_OFFSET;
                     break;
                 default:
                     startOffset = FileItemProperties.LengthPerItem;
@@ -772,7 +884,7 @@ namespace WLO_Translator_WPF
                         //Console.WriteLine("Completed Collection of Found Item With Name: " + itemData.Name);
                     }
                     //else
-                        //Console.WriteLine("Uncompleted Collection of Item");
+                    //Console.WriteLine("Uncompleted Collection of Item");
                 }
                 progress += dataPerTask;
                 if (progress >= bytes.Length / 5)
@@ -787,42 +899,10 @@ namespace WLO_Translator_WPF
             ReportProgress(ref foundItemsToAdd, bytes.Length, isMultiTranslator, false);
         }
 
-        public void ExportFoundItemsAsExcelDocument()
-        {
-            ExportItemsAsExcelDocument("Found", ref mListBoxFoundItems);
-        }
-
-        public void ExportStoredItemsAsExcelDocument()
-        {
-            ExportItemsAsExcelDocument("Stored", ref mListBoxStoredItems);
-        }
-
-        public void ExportItemsAsExcelDocument(string typeOfItems, ref ListBox listBox)
-        {
-            if (FileItemProperties.FileType == FileType.NULL)
-                return;
-
-            SaveFileDialog saveFileDialog   = new SaveFileDialog();
-            saveFileDialog.DefaultExt       = ".xlsx";
-            saveFileDialog.Filter           = "Excel File|.xlsx";
-            saveFileDialog.Title            = "Export " + typeOfItems + " Item Data as Excel File";
-
-            if (saveFileDialog.ShowDialog() == true)
-            {
-                List<Item> items = listBox.Items.OfType<Item>().ToList();
-                List<Dictionary<string, object>> stringLists = new List<Dictionary<string, object>>();
-                for (int i = 0; i < items.Count; i++)
-                {
-                    Item item = items[i];
-                    stringLists.Add(item.GetExcelTextExportList());
-                }
-
-                MiniExcelLibs.MiniExcel.SaveAs(saveFileDialog.FileName, stringLists);
-
-                mLabelReportInfo.Content = "Export Stored Items as an Excel Document at \"" + saveFileDialog.FileName + "\"";
-            }
-        }
-
+        /// <summary>
+        /// The progress-function for the found-itemdata collection's background worker.
+        /// Reports progress to loading bar and stores the ready items into the listbox.
+        /// </summary>
         private void BackgroundWorkerFoundItemData_ProgressChanged(object sender, ProgressChangedEventArgs e)
         {
             object[] arguments = (object[])e.UserState;
@@ -833,16 +913,23 @@ namespace WLO_Translator_WPF
                 isMultiTranslator);
         }
 
+        /// <summary>
+        /// The completed-function for the found-itemdata collection's background worker.
+        /// Starts the process of loading the stored items.
+        /// </summary>
         private void BackgroundWorkerFoundItemData_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
         {
-            //IsFoundItemDataCollectionCompleted = true;
             object[] arguments = e.Result as object[];
             StartBackgroundWorkerLoadStoredItemData(arguments[0] as string, (bool)arguments[1]);
 
             Console.WriteLine("Found Item Data Worker Completed");
         }
+
         #endregion
 
+        /// <summary>
+        /// Starts the background worker for loading the stored items.
+        /// </summary>
         public void StartBackgroundWorkerLoadStoredItemData(string filePath, bool isMultiTranslator)
         {
             if (mBackgroundWorkerStoredItemData != null)
@@ -851,21 +938,28 @@ namespace WLO_Translator_WPF
                 mBackgroundWorkerStoredItemData = null;
             }
 
+            mListBoxFoundItems.ItemsSource = mItemSourceListBoxFoundItemsTemporary;
+
             //if (!isMultiTranslator)
             //{
             //    ListBoxUpdateSuspender.SuspendUpdate(mListBoxFoundItems);
             //    ListBoxUpdateSuspender.SuspendUpdate(mListBoxStoredItems);
             //}
 
-            mBackgroundWorkerStoredItemData = new BackgroundWorker();
-            mBackgroundWorkerStoredItemData.WorkerReportsProgress = true;
-            mBackgroundWorkerStoredItemData.DoWork              += BackgroundWorkerStoredItemData_DoWork;
-            mBackgroundWorkerStoredItemData.ProgressChanged     += BackgroundWorkerStoredItemData_ProgressChanged;
-            mBackgroundWorkerStoredItemData.RunWorkerCompleted  += BackgroundWorkerStoredItemData_RunWorkerCompleted;
+            mBackgroundWorkerStoredItemData                         = new BackgroundWorker();
+            mBackgroundWorkerStoredItemData.WorkerReportsProgress   = true;
+            mBackgroundWorkerStoredItemData.DoWork                 += BackgroundWorkerStoredItemData_DoWork;
+            mBackgroundWorkerStoredItemData.ProgressChanged        += BackgroundWorkerStoredItemData_ProgressChanged;
+            mBackgroundWorkerStoredItemData.RunWorkerCompleted     += BackgroundWorkerStoredItemData_RunWorkerCompleted;
             mBackgroundWorkerStoredItemData.RunWorkerAsync(new object[] { filePath, isMultiTranslator });
         }
-        
-        #region Background worker stored item data
+
+        #region Background Worker Stored Item Data
+
+        /// <summary>
+        /// The work-function for the stored-itemdata collection's background worker.
+        /// Thread used for work and reporting progress to loading bar.
+        /// </summary>
         private void BackgroundWorkerStoredItemData_DoWork(object sender, DoWorkEventArgs e)
         {
             object[] arguments = e.Argument as object[];
@@ -880,24 +974,33 @@ namespace WLO_Translator_WPF
             e.Result = arguments[1];
         }
 
+        /// <summary>
+        /// The progress-function for the stored-itemdata collection's background worker.
+        /// Reports progress to loading bar and stores the ready items into the listbox.
+        /// </summary>
         private void BackgroundWorkerStoredItemData_ProgressChanged(object sender, ProgressChangedEventArgs e)
         {
-            object[]        arguments           = (object[])e.UserState;
-            List<ItemData>  storedItemsToAdd    = (List<ItemData>)arguments[0];
-            bool            isMultiTranslator   = (bool)arguments[1];
+            object[] arguments = (object[])e.UserState;
+            List<ItemData> storedItemsToAdd = (List<ItemData>)arguments[0];
+            bool isMultiTranslator = (bool)arguments[1];
 
             _ = StoreItemsInListBoxAsync(mItemSourceListBoxStoredItemsTemporary, storedItemsToAdd, e.ProgressPercentage, true,
                 isMultiTranslator);
         }
 
+        //TODO: Remove unnecessary completion function
         private void BackgroundWorkerStoredItemData_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
         {
             //bool isMultiTranslator = (bool)e.Result;
             //if (!isMultiTranslator)
             //    ((MainWindow)Application.Current.MainWindow).InitializeItemSearch();
         }
+
         #endregion
 
+        /// <summary>
+        /// Reports the progress to the loading bar and starts the process of adding the items to it's list.
+        /// </summary>
         private void ReportProgress(ref List<ItemData> itemData, int progress, bool isMultiTranslator, bool isStoredItems)
         {
             // Pick background worker
@@ -915,18 +1018,29 @@ namespace WLO_Translator_WPF
                 Thread.Sleep(sleepTime);
         }
 
+        // <summary>
         // The name length affects where the id of the item is located.
         // This function gathers all data based on the data in the item already.
+        // WARNING: THIS FUNCTION UPDATES THE ID, NAME AND DESCRIPTION OF THE ITEM.
+        // IT CHANGES THE END-POSITION LENGTHS AND THUS THE PLACES FROM WHERE THE TRANSLATIONS ARE BEING REPLACED
+        // IT'S IMPORTANT THAT THESE POSITIONS ARE RIGHT FOR THINGS TO WORK PROPERLY.
+        // </summary>
         public void UpdateItemInfoBasedOnNewNameLength(Item item)
         {
+            if (MessageBox.Show("Warning: This will update the ID, Name and Description positions."
+                + "\nOnly do this if the ID has been extracted from the wrong place due to faulty data lengths (Name, Description, Extras)"
+                + "and maybe also extracted the wrong description because of it.", "Warning",
+                MessageBoxButton.OKCancel, MessageBoxImage.Warning) == MessageBoxResult.Cancel)
+                return;
+
             // Update name end position
-            item.NameEndPosition            = item.NameStartPosition    + item.Name.Length;
+            item.NameEndPosition = item.NameStartPosition + item.Name.Length;
 
             // Update ID
             UpdateItemID(ref item);
 
             // Update description
-            if (FileItemProperties.AfterNameToDescriptionLength > 0)
+            if (FileItemProperties.HasDescription)
             {
                 item.DescriptionLengthPosition = item.NameEndPosition + FileItemProperties.AfterNameToDescriptionLength;
                 int descriptionLength = mOpenFileText[item.DescriptionLengthPosition];
@@ -945,8 +1059,13 @@ namespace WLO_Translator_WPF
                 item.DescriptionStartPosition = i;
                 item.DescriptionEndPosition = i + descriptionLength;
             }
+
+            //TODO: Add update extra
         }
 
+        /// <summary>
+        /// Updates the item's ID based on it's offsets
+        /// </summary>
         public void UpdateItemID(ref Item item)
         {
             int offset = 0;
@@ -973,7 +1092,7 @@ namespace WLO_Translator_WPF
                 --nameEndPositionWithOffset;
 
             // Extract the item ID
-            item.ID                 = new int[]
+            item.ID = new int[]
             {
                 mOpenFileData[nameEndPositionWithOffset],
                 mOpenFileData[nameEndPositionWithOffset + 1],
@@ -983,37 +1102,49 @@ namespace WLO_Translator_WPF
             item.IDEndPosition      = nameEndPositionWithOffset + 2;
         }
 
+        /// <summary>
+        /// Sets the project's open file name.
+        /// </summary>
         public void SetProjectOpenFileName(ref Grid gridProjectFileName, string fileName)
         {
             string name = TextManager.GetFileTypeToString(FileItemProperties.FileType);
             (gridProjectFileName.Children[0] as TextBlock).Text     = name;
             (gridProjectFileName.Children[0] as TextBlock).ToolTip  = fileName;
-             gridProjectFileName.Visibility = Visibility.Visible;
+            gridProjectFileName.Visibility = Visibility.Visible;
         }
 
+        /// <summary>
+        /// Removes the project's open file name.
+        /// </summary>
         public void RemoveProjectOpenFileName(ref Grid gridProjectFileName)
         {
             (gridProjectFileName.Children[0] as TextBlock).Text     = "";
             (gridProjectFileName.Children[0] as TextBlock).ToolTip  = "";
-             gridProjectFileName.Visibility = Visibility.Hidden;
+            gridProjectFileName.Visibility = Visibility.Hidden;
         }
 
-        public void CloseFileToTranslate()
+        /// <summary>
+        /// Closes the file that was opened to translate or grab translations from.
+        /// </summary>
+        public void CloseFileToTranslateOrGrabTranslationsFrom()
         {
             // Load in text from file
-            mScintillaWPFTextBox.ReadOnly       = false;
+            mScintillaWPFTextBox.ReadOnly = false;
             mScintillaWPFTextBox.Scintilla.Text = "";
-            mScintillaWPFTextBox.ReadOnly       = true;
-            mListBoxFoundItems.ItemsSource      = new ObservableCollection<Item>();
-            mListBoxStoredItems.ItemsSource     = new ObservableCollection<Item>();
+            mScintillaWPFTextBox.ReadOnly = true;
+            mListBoxFoundItems.ItemsSource = new ObservableCollection<Item>();
+            mListBoxStoredItems.ItemsSource = new ObservableCollection<Item>();
             FileItemProperties = null;
 
             ItemSearch.ClearStoredItemsWhileSearching();
 
             mOpenFileText = null;
             mOpenFileData = null;
-        }        
+        }
 
+        /// <summary>
+        /// Task (thread) that stores the items into a ListBox asynchronically.
+        /// </summary>
         private async Task StoreItemsInListBoxAsync(ObservableCollection<Item> observableItemCollection, List<ItemData> listItemsToAdd,
             double progressPercentage, bool isStoredItems, bool isMultiTranslator)
         {
@@ -1040,7 +1171,7 @@ namespace WLO_Translator_WPF
 
                 Random random = new Random();
                 indiceStack.Reverse();
-                
+
                 while (indiceStack.Count > 0)
                 {
                     try
@@ -1067,7 +1198,8 @@ namespace WLO_Translator_WPF
                                                 mRoutedEventHandlerButtonClickJumpToExtra1,
                                                 mRoutedEventHandlerButtonClickJumpToExtra2,
                                                 FileItemProperties.HasDescription,
-                                                FileItemProperties.HasExtras));
+                                                FileItemProperties.HasExtras,
+                                                isStoredItems));
                                         }
 
                                         return items;
@@ -1104,6 +1236,7 @@ namespace WLO_Translator_WPF
                             observableItemCollection[observableItemCollection.Count - 2].ItemEndPosition >=
                             observableItemCollection[observableItemCollection.Count - 1].ItemStartPosition)
                         {
+                            IsSorted = false;
                             Console.WriteLine("ItemEndPosition >= ItemStartPosition");
 #if DEBUG
                             MessageBox.Show("ItemEndPosition >= ItemStartPosition");
@@ -1123,23 +1256,29 @@ namespace WLO_Translator_WPF
             if (!LoadingBarManager.IsLoadingBarNull())
             {
                 if (progressPercentage > LoadingBarManager.Value)
-                    LoadingBarManager.Value  = progressPercentage;
+                    LoadingBarManager.Value = progressPercentage;
             }
 
             if (isStoredItems && IsFileOpenToTranslateRunning && LoadingBarManager.IsLoadingCompleted())
             {
-                FinishOpeningFileToTranslate(isMultiTranslator);
+                FinishOpeningTranslationFile(isMultiTranslator);
             }
         }
 
-        private void FinishOpeningFileToTranslate(bool isMultiTranslator)
+        /// <summary>
+        /// Finishes the loading of the file that the user is translating or grabbing the translations from.
+        /// </summary>
+        private void FinishOpeningTranslationFile(bool isMultiTranslator)
         {
             if (!isMultiTranslator)
             {
                 mDispatcher.Invoke(() =>
                 {
                     LoadingBarManager.CloseLoadingBar();
-                    mListBoxFoundItems.ItemsSource  = mItemSourceListBoxFoundItemsTemporary;
+                    
+                    if (!IsSorted)
+                        OrderStoredTemporaryItemListByItemStartPosition();
+
                     mListBoxStoredItems.ItemsSource = mItemSourceListBoxStoredItemsTemporary;
 
                     ((MainWindow)Application.Current.MainWindow).InitializeItemSearch();
@@ -1150,6 +1289,20 @@ namespace WLO_Translator_WPF
             IsStoredItemDataToItemsProcessRunning   = false;
         }
 
+        /// <summary>
+        /// Orders the stored temporary items' List by item start position
+        /// </summary>
+        private void OrderStoredTemporaryItemListByItemStartPosition()
+        {
+            List<Item> items = mItemSourceListBoxStoredItemsTemporary.OrderBy((Item item) => { return item.ItemStartPosition; }).ToList();
+            mItemSourceListBoxStoredItemsTemporary = new ObservableCollection<Item>(items);
+            
+            IsSorted    = true;
+        }
+
+        /// <summary>
+        /// Exports the file (meant to do after translating it) to the by the user chosen path.
+        /// </summary>
         public string ExportFile(string path = null, string text = null)
         {
             if (path == null)
@@ -1159,7 +1312,7 @@ namespace WLO_Translator_WPF
                 saveFileDialog.Title            = "Export File";
                 saveFileDialog.DefaultExt       = ".dat";
                 saveFileDialog.FileName         = TextManager.GetFileTypeToString(FileItemProperties.FileType) + ".dat";
-                var result = saveFileDialog.ShowDialog();
+                var result                      = saveFileDialog.ShowDialog();
 
                 if (result.Value)
                     path = saveFileDialog.FileName;
@@ -1178,11 +1331,61 @@ namespace WLO_Translator_WPF
             return path;
         }
 
+        #region Export Items as Excel Document
+
+        public void ExportFoundItemsAsExcelDocument()
+        {
+            ExportItemsAsExcelDocument("Found", ref mListBoxFoundItems);
+        }
+
+        public void ExportStoredItemsAsExcelDocument()
+        {
+            ExportItemsAsExcelDocument("Stored", ref mListBoxStoredItems);
+        }
+
+        /// <summary>
+        /// Exports items in the provided listBox to a path chosen by the user as an excel-document.
+        /// </summary>
+        public void ExportItemsAsExcelDocument(string typeOfItems, ref ListBox listBox)
+        {
+            if (FileItemProperties.FileType == FileType.NULL)
+                return;
+
+            SaveFileDialog saveFileDialog = new SaveFileDialog();
+            saveFileDialog.DefaultExt = ".xlsx";
+            saveFileDialog.Filter = "Excel File|.xlsx";
+            saveFileDialog.Title = "Export " + typeOfItems + " Item Data as Excel File";
+
+            if (saveFileDialog.ShowDialog() == true)
+            {
+                List<Item> items = listBox.Items.OfType<Item>().ToList();
+                List<Dictionary<string, object>> stringLists = new List<Dictionary<string, object>>();
+                for (int i = 0; i < items.Count; i++)
+                {
+                    Item item = items[i];
+                    stringLists.Add(item.GetExcelTextExportList());
+                }
+
+                MiniExcelLibs.MiniExcel.SaveAs(saveFileDialog.FileName, stringLists);
+
+                mLabelReportInfo.Content = "Export Stored Items as an Excel Document at \"" + saveFileDialog.FileName + "\"";
+            }
+        }
+
+        #endregion
+
+        /// <summary>
+        /// Sets the report info text, that is the Label down left of the MainWindow.
+        /// </summary>
         public void SetReportInfoText(string text)
         {
             mLabelReportInfo.Content = text;
         }
 
+        /// <summary>
+        /// Returns the opened file text, which is either the TranslatedFileText, the OpenFileText,
+        /// or null if no one of them isn't qual to null.
+        /// </summary>
         public string GetOpenFileText()
         {
             if (TranslatedFileText != null && TranslatedFileText != "")
@@ -1191,6 +1394,6 @@ namespace WLO_Translator_WPF
                 return OpenFileText;
             else
                 return null;
-        }        
+        }
     }
 }

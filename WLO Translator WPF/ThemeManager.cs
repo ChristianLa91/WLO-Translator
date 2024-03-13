@@ -6,8 +6,15 @@ using System.Windows.Media;
 
 namespace WLO_Translator_WPF
 {
+    /// <summary>
+    /// ThemeManager class handles the theme app
+    /// </summary>
     public static class ThemeManager
     {
+        /// <summary>
+        /// Used for binding the brushes of the items, so that they can instantly update the colors of the fonts without
+        /// the need of iterating every item.
+        /// </summary>
         public class BrushesBinding : INotifyPropertyChanged
         {
             public BrushesBinding() { PropertyChanged += BrushesBinding_PropertyChanged; }
@@ -32,6 +39,8 @@ namespace WLO_Translator_WPF
             {
             }
         }
+
+        #region Fields
 
         // Objects
         private static Grid                 mGridBack                           = null;
@@ -79,6 +88,9 @@ namespace WLO_Translator_WPF
         public  static int                  ThemeIndex                          { get; private set; } = 0;
 
         private static int                  mThemeNamesCount = 5;
+
+        #endregion
+
         private enum ThemeNames
         {
             DEFAULT,
@@ -88,6 +100,9 @@ namespace WLO_Translator_WPF
             GRAY_PATTERNS
         }
 
+        /// <summary>
+        /// Initializes the theme manager.
+        /// </summary>
         public static void Initialize(ref Grid gridBack, ref Grid[] gridsFront, ref Menu menu, ref ToolBar toolBar, ref GroupBox[] groupBoxes,
                                       ref CheckBox[] checkBoxes, ref Button[] buttons, ref GridSplitter[] gridSplitters, ref Label[] labels,
                                       ref ScintillaWPF scintillaTextBox, ref ListBox[] listBoxes,
@@ -132,7 +147,10 @@ namespace WLO_Translator_WPF
             mButtonClose                    = buttonClose;
         }
 
-        private static string GetEnumName(int index)
+        /// <summary>
+        /// Retrieves the theme-name from the enum at the specified index.
+        /// </summary>
+        private static string GetThemeNameFromEnum(int index)
         {
             string output = "";
 
@@ -148,12 +166,18 @@ namespace WLO_Translator_WPF
             return output;
         }
 
-        public static void SetThemesToComboBox(ref ComboBox comboBoxThemes)
+        /// <summary>
+        /// Sets the theme names to the combo box you can select themes from.
+        /// </summary>
+        public static void SetThemeNamesToComboBox(ref ComboBox comboBoxThemes)
         {
             for (int i = 0; i < mThemeNamesCount; ++i)
-                comboBoxThemes.Items.Add(GetEnumName(i));
+                comboBoxThemes.Items.Add(GetThemeNameFromEnum(i));
         }
 
+        /// <summary>
+        /// Updates the menu colors according to the back and front brushes.
+        /// </summary>
         private static void SetMenuColors(Brush backgroundBrush, Brush foregroundBrush)
         {
             mMenu.Background = backgroundBrush;
@@ -178,6 +202,9 @@ namespace WLO_Translator_WPF
             }
         }
 
+        /// <summary>
+        /// Updates the colors of the different UI-components according to the specified brushes.
+        /// </summary>
         private static void SetThemeColors(Brush menuBrush, Brush toolBarBrush, Brush groupBoxesBorderBrush,
             Brush checkBoxesBrush, Brush buttonsBrush, Brush gridBackBrush, Brush gridFrontBrush, Brush gridSplittersBrush,
             Brush foregroundFontBrush, System.Drawing.Color scintiellaBackColor, System.Drawing.Color scintiellaForeColor,
@@ -281,58 +308,74 @@ namespace WLO_Translator_WPF
             mScintillaTextBox.CaretForeColor = ((SolidColorBrush)foregroundFontBrush).Color;
         }
 
-        private static Brush GetTransparantBrush(byte transparancy, Brush brush)
+        /// <summary>
+        /// Returns a brush with the specified color and transparency.
+        /// </summary>
+        private static Brush GetTransparentBrush(byte alpha, Brush brush)
         {
             SolidColorBrush solidColorBrush = brush as SolidColorBrush;
             return new SolidColorBrush(
-                Color.FromArgb(transparancy, solidColorBrush.Color.R, solidColorBrush.Color.G, solidColorBrush.Color.B));
+                Color.FromArgb(alpha, solidColorBrush.Color.R, solidColorBrush.Color.G, solidColorBrush.Color.B));
         }
 
-        private static Brush GetTransparantBrush(byte transparancy, byte red, byte green, byte blue)
+        /// <summary>
+        /// Returns a brush with the specified color values and transparency.
+        /// </summary>
+        private static Brush GetTransparentBrush(byte alpha, byte red, byte green, byte blue)
         {
-            return new SolidColorBrush(Color.FromArgb(transparancy, red, green, blue));
+            return new SolidColorBrush(Color.FromArgb(alpha, red, green, blue));
         }
 
+        /// <summary>
+        /// Sets the colorful lanscape theme.
+        /// </summary>
         private static void SetColorfulLandscapeTheme()
         {
             byte lowTransparancy     = 178;
             byte highTransparancy    = 78;
 
-            Brush menuBrush         = GetTransparantBrush(lowTransparancy, 255, 255, 255);
-            Brush toolBarBrush      = GetTransparantBrush(highTransparancy, 255, 255, 255);
+            Brush menuBrush         = GetTransparentBrush(lowTransparancy, 255, 255, 255);
+            Brush toolBarBrush      = GetTransparentBrush(highTransparancy, 255, 255, 255);
 
             string imageName = "Wonderland Online Landscape";
             ImageBrush groupBoxBackBrush = new ImageBrush((ImageSource)System.Windows.Application.Current.MainWindow.FindResource(imageName));
 
             SetThemeColors(menuBrush, toolBarBrush, mBorderBrushGroupBoxDefault, mBackBrushCheckBoxDefault,
-                mBackBrushButtonDefault, groupBoxBackBrush, GetTransparantBrush(highTransparancy, mBackBrushGridFrontDefault),
-                GetTransparantBrush(lowTransparancy, mBackBrushGridFrontDefault), Brushes.Black,
+                mBackBrushButtonDefault, groupBoxBackBrush, GetTransparentBrush(highTransparancy, mBackBrushGridFrontDefault),
+                GetTransparentBrush(lowTransparancy, mBackBrushGridFrontDefault), Brushes.Black,
                 mBackColorScintiellaDefault, mForeColorScintiellaDefault, mBackBrushTextBoxesDefault, mBorderBrushTextBoxesDefault,
-                GetTransparantBrush(lowTransparancy, mBackBrushGridProjectFileName),
-                GetTransparantBrush(lowTransparancy, mForeBrushGridProjectFileName));
+                GetTransparentBrush(lowTransparancy, mBackBrushGridProjectFileName),
+                GetTransparentBrush(lowTransparancy, mForeBrushGridProjectFileName));
         }
 
+        /// <summary>
+        /// Sets the gray patterns theme.
+        /// </summary>
         private static void SetGrayPatternsTheme()
         {
             byte lowTransparancy    = 178;
             byte highTransparancy   = 158;
 
-            Brush menuBrush         = GetTransparantBrush(lowTransparancy, 255, 255, 255);
-            Brush toolBarBrush      = GetTransparantBrush(highTransparancy, 255, 255, 255);
-            Brush checkBoxBrush     = GetTransparantBrush(highTransparancy, 255, 255, 255);
+            Brush menuBrush         = GetTransparentBrush(lowTransparancy, 255, 255, 255);
+            Brush toolBarBrush      = GetTransparentBrush(highTransparancy, 255, 255, 255);
+            Brush checkBoxBrush     = GetTransparentBrush(highTransparancy, 255, 255, 255);
 
             string imageName = "Gray Patterns";
             ImageBrush groupBoxBackBrush = new ImageBrush((ImageSource)System.Windows.Application.Current.MainWindow.FindResource(imageName));
 
             SetThemeColors(menuBrush, toolBarBrush, mBorderBrushGroupBoxDefault, checkBoxBrush,
-                mBackBrushButtonDefault, groupBoxBackBrush, GetTransparantBrush(lowTransparancy, mBackBrushGridFrontDefault),
-                GetTransparantBrush(lowTransparancy, mBackBrushGridFrontDefault), Brushes.Black,
+                mBackBrushButtonDefault, groupBoxBackBrush, GetTransparentBrush(lowTransparancy, mBackBrushGridFrontDefault),
+                GetTransparentBrush(lowTransparancy, mBackBrushGridFrontDefault), Brushes.Black,
                 mBackColorScintiellaDefault, mForeColorScintiellaDefault, mBackBrushTextBoxesDefault, mBorderBrushTextBoxesDefault,
                 mBackBrushGridProjectFileName, mForeBrushGridProjectFileName);
         }
 
         private enum WindowButtonColor  { NORMAL, BLACK, WHITE }
         private enum WindowButtonType   { MINIMIZE, RESIZE_NORMAL, RESIZE_FULLSCREEN, CLOSE }
+
+        /// <summary>
+        /// Sets the images of the window buttons (minimize, resize and close).
+        /// </summary>
         private static void SetWindowButtons(WindowButtonColor windowButtonColor)
         {
             System.Windows.Window mainWindow = System.Windows.Application.Current.MainWindow;
@@ -374,6 +417,9 @@ namespace WLO_Translator_WPF
             (mButtonClose.Content as Image).Source = (ImageSource)mainWindow.FindResource(buttonImageNames[(int)WindowButtonType.CLOSE]);
         }
 
+        /// <summary>
+        /// Applies the theme with the specified theme index.
+        /// </summary>
         public static void ApplyTheme(int themeIndex = -1)
         {
             if (themeIndex != -1)
@@ -392,17 +438,17 @@ namespace WLO_Translator_WPF
                     break;
                 case 1: // Light color
                     Brush white     = Brushes.White;
-                    Brush lightGray = GetTransparantBrush(255, 250, 250, 250);
+                    Brush lightGray = GetTransparentBrush(255, 250, 250, 250);
                     SetThemeColors(white, white, lightGray, white, lightGray, lightGray, white, lightGray,
                         Brushes.Black, mBackColorScintiellaDefault, mForeColorScintiellaDefault,
                         mBackBrushTextBoxesDefault, lightGray, lightGray, mForeBrushGridProjectFileName);
                     SetWindowButtons(WindowButtonColor.BLACK);
                     break;
                 case 2: // Dark color
-                    Brush darkGray      = GetTransparantBrush(255, 80, 80, 85);
-                    SolidColorBrush darkerGray = (SolidColorBrush)GetTransparantBrush(255, 60, 60, 65);
-                    Brush darkestGray   = GetTransparantBrush(255, 50, 50, 55);
-                    Brush lighterGray   = GetTransparantBrush(255, 90, 90, 95);
+                    Brush darkGray      = GetTransparentBrush(255, 80, 80, 85);
+                    SolidColorBrush darkerGray = (SolidColorBrush)GetTransparentBrush(255, 60, 60, 65);
+                    Brush darkestGray   = GetTransparentBrush(255, 50, 50, 55);
+                    Brush lighterGray   = GetTransparentBrush(255, 90, 90, 95);
                     SetThemeColors(darkGray, darkGray, darkerGray, darkerGray, darkerGray, darkerGray, darkGray, darkerGray, 
                         Brushes.White, System.Drawing.Color.FromArgb(255, darkerGray.Color.R, darkerGray.Color.G, darkerGray.Color.B),
                         System.Drawing.Color.White, darkerGray, darkGray, lighterGray, darkestGray);

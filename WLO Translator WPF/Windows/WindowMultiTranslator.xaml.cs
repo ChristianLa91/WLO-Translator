@@ -12,7 +12,17 @@ using System.Windows.Media;
 namespace WLO_Translator_WPF
 {
     /// <summary>
-    /// Interaction logic for WindowMultiTranslator.xaml
+    /// The WindowMultiTranslator window is mainly intended as a much faster way to translate the files after every data-file
+    /// already has had their translations stored once.
+    /// 
+    /// Usage:
+    /// It works by first selecting the paths to the files the user wants to translate,
+    /// then proceeding to translate the files using the translate-button -- then after the translation process is done --
+    /// checking if there are items in the lower right TreeView-box that are left to be translated.
+    /// If there are items that are untranslated; the user can then quickly or in their own pace, translate the remaining items there,
+    /// click the button that stores the newly translated items, then click the translation-button again, wait for the process to finish.
+    /// Regardles if there were any untranslated items, the user can then proceed to export the translated files into a by the user
+    /// selected folder.
     /// </summary>
     public partial class WindowMultiTranslator : Window
     {
@@ -23,7 +33,7 @@ namespace WLO_Translator_WPF
         private Dictionary<FileType, List<ItemData>>        mStoredItemsDictionaty;
         private List<string>                                mTranslatedFileTexts;
         private List<FileItemProperties>                    mFileItemProperties;
-        private List<ListBoxItemMTData>                     mFilesSelectedForTranslation; // Used to see which files should be translated
+        private List<LBIFileToTranslateMTData>              mFilesSelectedForTranslation; // Used to see which files should be translated
 
         public WindowMultiTranslator(ref FileManager fileManager)
         {
@@ -31,25 +41,25 @@ namespace WLO_Translator_WPF
 
             mFileManager                = fileManager;
 
-            ListBoxFiles.Items.Add(new ListBoxItemMT("Item", FileType.ITEM, 
+            ListBoxFiles.Items.Add(new LBIFileToTranslateMT("Item", FileType.ITEM, 
                 CheckBoxItemFileMultiTranslator_Click, ButtonOpenFileSelect_Click));
-            ListBoxFiles.Items.Add(new ListBoxItemMT("Mark", FileType.MARK,
+            ListBoxFiles.Items.Add(new LBIFileToTranslateMT("Mark", FileType.MARK,
                 CheckBoxItemFileMultiTranslator_Click, ButtonOpenFileSelect_Click));
-            ListBoxFiles.Items.Add(new ListBoxItemMT("Npc", FileType.NPC,
+            ListBoxFiles.Items.Add(new LBIFileToTranslateMT("Npc", FileType.NPC,
                 CheckBoxItemFileMultiTranslator_Click, ButtonOpenFileSelect_Click));
-            ListBoxFiles.Items.Add(new ListBoxItemMT("SceneData", FileType.SCENEDATA,
+            ListBoxFiles.Items.Add(new LBIFileToTranslateMT("SceneData", FileType.SCENEDATA,
                 CheckBoxItemFileMultiTranslator_Click, ButtonOpenFileSelect_Click));
-            ListBoxFiles.Items.Add(new ListBoxItemMT("Skill", FileType.SKILL,
+            ListBoxFiles.Items.Add(new LBIFileToTranslateMT("Skill", FileType.SKILL,
                 CheckBoxItemFileMultiTranslator_Click, ButtonOpenFileSelect_Click));
-            ListBoxFiles.Items.Add(new ListBoxItemMT("Talk", FileType.TALK,
+            ListBoxFiles.Items.Add(new LBIFileToTranslateMT("Talk", FileType.TALK,
                 CheckBoxItemFileMultiTranslator_Click, ButtonOpenFileSelect_Click));
 
-            (ListBoxFiles.Items[0] as ListBoxItemMT).FilePath = Settings.MultiTranslatorItemDataPath;
-            (ListBoxFiles.Items[1] as ListBoxItemMT).FilePath = Settings.MultiTranslatorMarkDataPath;
-            (ListBoxFiles.Items[2] as ListBoxItemMT).FilePath = Settings.MultiTranslatorNpcDataPath;
-            (ListBoxFiles.Items[3] as ListBoxItemMT).FilePath = Settings.MultiTranslatorSceneDataDataPath;
-            (ListBoxFiles.Items[4] as ListBoxItemMT).FilePath = Settings.MultiTranslatorSkillDataPath;
-            (ListBoxFiles.Items[5] as ListBoxItemMT).FilePath = Settings.MultiTranslatorTalkDataPath;
+            (ListBoxFiles.Items[0] as LBIFileToTranslateMT).FilePath = Settings.MultiTranslatorItemDataPath;
+            (ListBoxFiles.Items[1] as LBIFileToTranslateMT).FilePath = Settings.MultiTranslatorMarkDataPath;
+            (ListBoxFiles.Items[2] as LBIFileToTranslateMT).FilePath = Settings.MultiTranslatorNpcDataPath;
+            (ListBoxFiles.Items[3] as LBIFileToTranslateMT).FilePath = Settings.MultiTranslatorSceneDataDataPath;
+            (ListBoxFiles.Items[4] as LBIFileToTranslateMT).FilePath = Settings.MultiTranslatorSkillDataPath;
+            (ListBoxFiles.Items[5] as LBIFileToTranslateMT).FilePath = Settings.MultiTranslatorTalkDataPath;
         }
 
         private void ButtonOpenFileSelect_Click(object sender, RoutedEventArgs e)
@@ -59,7 +69,7 @@ namespace WLO_Translator_WPF
 
             if (mOpenFileDialog.ShowDialog() == true)
             {
-                ListBoxItemMT item = (sender as Button).Tag as ListBoxItemMT;
+                LBIFileToTranslateMT item = (sender as Button).Tag as LBIFileToTranslateMT;
                 item.FilePath   = mOpenFileDialog.FileName;
                 item.IsChecked  = true;
             }
@@ -67,8 +77,8 @@ namespace WLO_Translator_WPF
 
         private void CheckBoxItemFileMultiTranslator_Click(object sender, RoutedEventArgs e)
         {
-            if (ListBoxFiles.Items.OfType<ListBoxItemMT>()
-                .All((ListBoxItemMT listBoxItemMultiTranslator) => { return listBoxItemMultiTranslator.IsChecked.Value; }))
+            if (ListBoxFiles.Items.OfType<LBIFileToTranslateMT>()
+                .All((LBIFileToTranslateMT listBoxItemMultiTranslator) => { return listBoxItemMultiTranslator.IsChecked.Value; }))
                 CheckBoxFilesSelectAll.IsChecked = true;
             else
                 CheckBoxFilesSelectAll.IsChecked = false;
@@ -76,8 +86,8 @@ namespace WLO_Translator_WPF
 
         private void CheckBoxItemTranslatedFileMultiTranslator_Click(object sender, RoutedEventArgs e)
         {
-            if (ListBoxTranslatedFiles.Items.OfType<ListBoxItemMT>()
-                .All((ListBoxItemMT listBoxItemMultiTranslator) => { return listBoxItemMultiTranslator.IsChecked.Value; }))
+            if (ListBoxTranslatedFiles.Items.OfType<LBIFileToTranslateMT>()
+                .All((LBIFileToTranslateMT listBoxItemMultiTranslator) => { return listBoxItemMultiTranslator.IsChecked.Value; }))
                 CheckBoxTranslatedFilesSelectAll.IsChecked = true;
             else
                 CheckBoxTranslatedFilesSelectAll.IsChecked = false;
@@ -104,12 +114,12 @@ namespace WLO_Translator_WPF
 
         private void ButtonOK_Click(object sender, RoutedEventArgs e)
         {
-            Settings.MultiTranslatorItemDataPath        = (ListBoxFiles.Items[0] as ListBoxItemMT).FilePath;
-            Settings.MultiTranslatorMarkDataPath        = (ListBoxFiles.Items[1] as ListBoxItemMT).FilePath;
-            Settings.MultiTranslatorNpcDataPath         = (ListBoxFiles.Items[2] as ListBoxItemMT).FilePath;
-            Settings.MultiTranslatorSceneDataDataPath   = (ListBoxFiles.Items[3] as ListBoxItemMT).FilePath;
-            Settings.MultiTranslatorSkillDataPath       = (ListBoxFiles.Items[4] as ListBoxItemMT).FilePath;
-            Settings.MultiTranslatorTalkDataPath        = (ListBoxFiles.Items[5] as ListBoxItemMT).FilePath;
+            Settings.MultiTranslatorItemDataPath        = (ListBoxFiles.Items[0] as LBIFileToTranslateMT).FilePath;
+            Settings.MultiTranslatorMarkDataPath        = (ListBoxFiles.Items[1] as LBIFileToTranslateMT).FilePath;
+            Settings.MultiTranslatorNpcDataPath         = (ListBoxFiles.Items[2] as LBIFileToTranslateMT).FilePath;
+            Settings.MultiTranslatorSceneDataDataPath   = (ListBoxFiles.Items[3] as LBIFileToTranslateMT).FilePath;
+            Settings.MultiTranslatorSkillDataPath       = (ListBoxFiles.Items[4] as LBIFileToTranslateMT).FilePath;
+            Settings.MultiTranslatorTalkDataPath        = (ListBoxFiles.Items[5] as LBIFileToTranslateMT).FilePath;
             mFileManager.SaveProgramSettings();
 
             Close();
@@ -117,13 +127,13 @@ namespace WLO_Translator_WPF
 
         private void CheckBoxFilesSelectAll_Click(object sender, RoutedEventArgs e)
         {
-            foreach (ListBoxItemMT listBoxItemMultiTranslator in ListBoxFiles.Items)
+            foreach (LBIFileToTranslateMT listBoxItemMultiTranslator in ListBoxFiles.Items)
                 listBoxItemMultiTranslator.IsChecked = CheckBoxFilesSelectAll.IsChecked.Value;
         }
 
         private void CheckBoxTranslatedFilesSelectAll_Click(object sender, RoutedEventArgs e)
         {
-            foreach (ListBoxItemMT listBoxItemMultiTranslator in ListBoxTranslatedFiles.Items)
+            foreach (LBIFileToTranslateMT listBoxItemMultiTranslator in ListBoxTranslatedFiles.Items)
                 listBoxItemMultiTranslator.IsChecked = CheckBoxTranslatedFilesSelectAll.IsChecked.Value;
         }
 
@@ -139,9 +149,9 @@ namespace WLO_Translator_WPF
 
         private void ButtonTranslateSelected_Click(object sender, RoutedEventArgs e)
         {
-            mFilesSelectedForTranslation = new List<ListBoxItemMTData>();
+            mFilesSelectedForTranslation = new List<LBIFileToTranslateMTData>();
 
-            foreach (ListBoxItemMT listBoxItemMultiTranslator in ListBoxFiles.Items.OfType<ListBoxItemMT>())
+            foreach (LBIFileToTranslateMT listBoxItemMultiTranslator in ListBoxFiles.Items.OfType<LBIFileToTranslateMT>())
             {
                 if (listBoxItemMultiTranslator.IsChecked == true)
                     mFilesSelectedForTranslation.Add(listBoxItemMultiTranslator.GetDataClass());
@@ -155,32 +165,33 @@ namespace WLO_Translator_WPF
             }
         }
 
+        /// <summary>
+        /// Translates the selected files to be translated asynchronically
+        /// </summary>
         private async Task TranslateSelectedFilesAsync()
         {
             mFoundItems             = new List<ItemData>();
-            //mStoredItemLists        = new List<List<ItemData>>();
-            mStoredItemsDictionaty   = new Dictionary<FileType, List<ItemData>>();
+            mStoredItemsDictionaty  = new Dictionary<FileType, List<ItemData>>();
             mTranslatedFileTexts    = new List<string>();
             mFileItemProperties     = new List<FileItemProperties>();
 
             try
             { 
-                foreach (ListBoxItemMTData itemData in mFilesSelectedForTranslation)
+                foreach (LBIFileToTranslateMTData itemData in mFilesSelectedForTranslation)
                 {
                     string fileName = itemData.FilePath;
 
                     // Get item data from the file being translated
-                    Application.Current.Dispatcher.Invoke(() => { mFileManager.OpenFileToTranslate(fileName, true); });
+                    Application.Current.Dispatcher.Invoke(() => { mFileManager.OpenTranslationFile(fileName, true); });
                     while (mFileManager.IsFileOpenToTranslateRunning)
                         Thread.Sleep(500);
 
                     mFoundItems     = mFileManager.GetFoundItems().ToList();
-                    //mStoredItemLists.Add(mFileManager.GetStoredItems().ToList());
-                    mStoredItemsDictionaty.Add(mFileManager.FileItemProperties.FileType, mFileManager.GetStoredItems().ToList());
+                    mStoredItemsDictionaty.Add(FileManager.FileItemProperties.FileType, mFileManager.GetStoredItems().ToList());
 
                     // Translate collected text data
                     string translatedText = await Translation.TranslateAsync(mFileManager.GetOpenFileText(), mFoundItems,
-                        mStoredItemsDictionaty.Last().Value, mFileManager.FileItemProperties, true);
+                        mStoredItemsDictionaty.Last().Value, FileManager.FileItemProperties, true);
 
                     // Add unstored items to tree view
                     Application.Current.Dispatcher.Invoke(() =>
@@ -196,8 +207,10 @@ namespace WLO_Translator_WPF
                             // Add items without translations to the tree view
                             foreach (ItemData itemDataUntranslated in Translation.GetItemsWithoutTranslations())
                             {
+                                if (itemDataUntranslated == null)
+                                    continue;
                                 Item item = itemDataUntranslated.ToItem(null, null, null, null, null, null, null,
-                                    mFileManager.FileItemProperties.HasDescription, mFileManager.FileItemProperties.HasExtras,
+                                    FileManager.FileItemProperties.HasDescription, FileManager.FileItemProperties.HasExtras, true,
                                     true, CheckBoxUnstoredItem_Click);
                                 // Change to Chinese encoding to make it readable to the translator
                                 FontFamily  unicodeFont = new FontFamily("SimHei");
@@ -211,12 +224,12 @@ namespace WLO_Translator_WPF
 
                     // Store translated text and file properties
                     mTranslatedFileTexts.Add(translatedText);
-                    mFileItemProperties.Add(mFileManager.FileItemProperties);
+                    mFileItemProperties.Add(FileManager.FileItemProperties);
 
                     // Add an item to ListBoxTranslatedFiles to signify what file has been translated
                     Application.Current.Dispatcher.Invoke(() =>
                     {
-                        ListBoxItemMT newItem = new ListBoxItemMT(itemData.Name, itemData.FileType,
+                        LBIFileToTranslateMT newItem = new LBIFileToTranslateMT(itemData.Name, itemData.FileType,
                             CheckBoxItemTranslatedFileMultiTranslator_Click);
                         newItem.FilePath = fileName;
                         ListBoxTranslatedFiles.Items.Add(newItem);
@@ -267,24 +280,31 @@ namespace WLO_Translator_WPF
             for (int i = 0; i < TreeViewUnstoredItems.Items.Count; ++i)
             {
                 TreeViewItemMT  fileToStore     = TreeViewUnstoredItems.Items[i] as TreeViewItemMT;
-                if (fileToStore.IsChecked == true)
-                {
+                bool hasStored = false;
+                //if (fileToStore.IsChecked == true)
+                //{
                     List<ItemData> storedItemData = mStoredItemsDictionaty[fileToStore.FileType];
                     foreach (Item item in fileToStore.Items.OfType<Item>())
                     {
                         if (item.IsChecked == true)
+                        {
                             InsertItemAtDataPositionOrder(storedItemData, item.ToItemData());
+                            hasStored = true;
+                        }
                     }
 
-                    mFileManager.SaveStoredItemData(fileToStore.FileType, storedItemData.Cast<IItemBase>().ToList());
-                }
+                    if (hasStored)
+                        mFileManager.SaveStoredItemData(fileToStore.FileType, storedItemData.Cast<IItemBase>().ToList());
+                //}
             }
 
             string message = "Selected Unstored Items Have Been Stored";
             TextBlockReportInfo.Text = message;
         }
 
-        // Inserts the item at the position it has in the untranslated file
+        /// <summary>
+        /// Inserts the item at the position it has in the untranslated file
+        /// </summary>
         private void InsertItemAtDataPositionOrder(List<ItemData> itemDataList, ItemData itemData)
         {
             int index = -1;

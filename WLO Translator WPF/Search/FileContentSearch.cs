@@ -2,6 +2,9 @@
 
 namespace WLO_Translator_WPF
 {
+    /// <summary>
+    /// The FileContentSearch class is used to search for the string specified in the file content search box.
+    /// </summary>
     public static class FileContentSearch
     {
         private static string   mSearchStringOld;
@@ -14,6 +17,9 @@ namespace WLO_Translator_WPF
             SEARCH_PREVIOUS
         }
 
+        /// <summary>
+        /// Seach for a string specified in the file content search box in the opened file data.
+        /// </summary>
         public static void SearchForString(string searchString, ref ScintillaWPF scintillaTextBox)
         {
             mTargetEndOld       = null;
@@ -24,6 +30,9 @@ namespace WLO_Translator_WPF
             mTargetEndOld       = scintillaTextBox.TargetEnd;
         }
 
+        /// <summary>
+        /// Seach for the next occurrence of a string specified in the file content search box in the opened file data.
+        /// </summary>
         public static void SearchNext(ref ScintillaWPF scintillaTextBox)
         {
             SelectAndScrollToFirstMatch(mSearchStringOld, ref scintillaTextBox, SearchOption.SEARCH_NEXT);
@@ -31,6 +40,9 @@ namespace WLO_Translator_WPF
             mTargetEndOld       = scintillaTextBox.TargetEnd;
         }
 
+        /// <summary>
+        /// Seach for the previous occurrence of a string specified in the file content search box in the opened file data.
+        /// </summary>
         public static void SearchPrevious(ref ScintillaWPF scintillaTextBox)
         {
             SelectAndScrollToFirstMatch(mSearchStringOld, ref scintillaTextBox, SearchOption.SEARCH_PREVIOUS);
@@ -38,6 +50,9 @@ namespace WLO_Translator_WPF
             mTargetEndOld = scintillaTextBox.TargetEnd;
         }
 
+        /// <summary>
+        /// Selects the found text (if it's found) and scrolls the text box so that the first match becomes visable.
+        /// </summary>
         private static void SelectAndScrollToFirstMatch(string searchString, ref ScintillaWPF scintillaTextBox,
             SearchOption searchOption = SearchOption.SEARCH_FIRST)
         {

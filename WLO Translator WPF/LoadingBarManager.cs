@@ -5,6 +5,10 @@ using System.Windows;
 
 namespace WLO_Translator_WPF
 {
+    /// <summary>
+    /// Class used to communicate with the loadingbar.
+    /// Preferable all of the communication with the loading bar should be done through this class.
+    /// </summary>
     static class LoadingBarManager
     {
         private static WindowLoadingBar mWindowLoadingBar;
@@ -27,6 +31,9 @@ namespace WLO_Translator_WPF
             }
         }
 
+        /// <summary>
+        /// Shows the loadingbar if it is not showing and initializes it to the specified value.
+        /// </summary>
         public static void ShowOrInitializeLoadingBar(string type, double value, FileItemProperties fileItemProperties,
             double? maximum = null, bool isTranslating = false)
         {
@@ -79,7 +86,6 @@ namespace WLO_Translator_WPF
             if (mWindowLoadingBar == null)
                 return;
 
-            // Close loading bar
             if (!IsLoadingBarNull())
             {
                 mWindowLoadingBar.Close();
@@ -102,7 +108,9 @@ namespace WLO_Translator_WPF
             mIsValueChanged = true;
         }
 
-        // Wait until the value of the progress bar have been updated
+        /// <summary>
+        /// Let's the thread wait until the value of the progressbar has been updated.
+        /// </summary>
         public static void WaitUntilValueHasChanged()
         {
             DateTime timeOut = DateTime.Now.AddSeconds(5);
