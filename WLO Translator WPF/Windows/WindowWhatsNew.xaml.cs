@@ -3,15 +3,13 @@
 namespace WLO_Translator_WPF
 {
     /// <summary>
-    /// Interaction logic for WindowAbout.xaml
+    /// Interaction logic for WindowWhatsNew.xaml
     /// </summary>
-    public partial class WindowAbout : Window
+    public partial class WindowWhatsNew : Window
     {
-        public WindowAbout(string applicationVersion)
+        public WindowWhatsNew()
         {
             InitializeComponent();
-
-            LabelVersion.Content = "Version " + System.IO.Path.GetFileNameWithoutExtension(applicationVersion);
         }
 
         private void ButtonOK_Click(object sender, RoutedEventArgs e)

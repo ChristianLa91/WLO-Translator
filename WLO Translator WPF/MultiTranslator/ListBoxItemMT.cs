@@ -3,14 +3,17 @@ using System.Windows.Controls;
 
 namespace WLO_Translator_WPF
 {
-    public class ListBoxItemMTData
+    /// <summary>
+    /// Class used for storing the data representing the file to translate in the multi-translator
+    /// </summary>
+    public class LBIFileToTranslateMTData
     {
         public string   Name        { get; private set; }
         public FileType FileType    { get; private set; }
         public string   FilePath    { get; private set; }
         public bool?    IsChecked   { get; private set; }
 
-        public ListBoxItemMTData(string name, FileType fileType, string filePath, bool? isChecked)
+        public LBIFileToTranslateMTData(string name, FileType fileType, string filePath, bool? isChecked)
         {
             Name        = name;
             FileType    = fileType;
@@ -19,7 +22,11 @@ namespace WLO_Translator_WPF
         }
     }
 
-    public class ListBoxItemMT : ListBoxItem
+    /// <summary>
+    /// Used for a visual representation of the multi-translator's ListBoxItems used for selection of file paths for the
+    /// files that should be translated
+    /// </summary>
+    public class LBIFileToTranslateMT : ListBoxItem
     {
         private string      mName;
         public  FileType    FileType    { get; private set; }
@@ -28,7 +35,7 @@ namespace WLO_Translator_WPF
         public  string      FilePath    { get { return TextBoxPath.Text;    } set { TextBoxPath.Text    = value; } }
         public  bool?       IsChecked   { get { return CheckBox.IsChecked;  } set { CheckBox.IsChecked  = value; } }
 
-        public ListBoxItemMT(string name, FileType fileType, RoutedEventHandler checkBoxItemMultiTranslator_Click,
+        public LBIFileToTranslateMT(string name, FileType fileType, RoutedEventHandler checkBoxItemMultiTranslator_Click,
             RoutedEventHandler routedEventHandlerButtonClick = null) : base()
         {
             mName       = name;
@@ -95,9 +102,9 @@ namespace WLO_Translator_WPF
             }
         }
 
-        public ListBoxItemMTData GetDataClass()
+        public LBIFileToTranslateMTData GetDataClass()
         {
-            return new ListBoxItemMTData(mName, FileType, FilePath, IsChecked);
+            return new LBIFileToTranslateMTData(mName, FileType, FilePath, IsChecked);
         }
     }
 }

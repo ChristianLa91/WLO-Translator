@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Windows.Controls;
 
+//TODO: develop this class so that actions can be undone and redone
 namespace WLO_Translator_WPF
 {
     enum HistoryActionTypes

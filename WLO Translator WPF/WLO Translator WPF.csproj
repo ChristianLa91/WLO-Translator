@@ -384,11 +384,12 @@
       <SubType>Designer</SubType>
     </ApplicationDefinition>
     <Compile Include="Constants.cs" />
-    <Compile Include="FoundItemDataCollection.cs" />
+    <Compile Include="Item\FoundItemDataCollection.cs" />
     <Compile Include="IO\Database.cs" />
     <Compile Include="IO\MouseOperations.cs" />
-    <Compile Include="TreeViewItemMT.cs" />
-    <Compile Include="ListBoxItemMT.cs" />
+    <Compile Include="Item\ItemManager.cs" />
+    <Compile Include="MultiTranslator\TreeViewItemMT.cs" />
+    <Compile Include="MultiTranslator\ListBoxItemMT.cs" />
     <Compile Include="LoadingBarManager.cs" />
     <Compile Include="Search\FileContentSearch.cs" />
     <Compile Include="HistoryManager.cs" />
@@ -416,6 +417,9 @@
     <Compile Include="Windows\WindowSettings.xaml.cs">
       <DependentUpon>WindowSettings.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Windows\WindowWhatsNew.xaml.cs">
+      <DependentUpon>WindowWhatsNew.xaml</DependentUpon>
+    </Compile>
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -425,7 +429,7 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="IO\FileManager.cs" />
-    <Compile Include="Item.cs" />
+    <Compile Include="Item\Item.cs" />
     <Compile Include="MainWindow.xaml.cs">
       <DependentUpon>MainWindow.xaml</DependentUpon>
       <SubType>Code</SubType>
@@ -451,6 +455,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Windows\WindowSettings.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Windows\WindowWhatsNew.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

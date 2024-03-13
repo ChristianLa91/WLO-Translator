@@ -5,6 +5,9 @@ using System.Windows.Documents;
 
 namespace WLO_Translator_WPF
 {
+    /// <summary>
+    /// Handles most of the text-manipulations in the program.
+    /// </summary>
     public static class TextManager
     {
         public static string GetStringWithEncoding(string text, Encoding encoding)
@@ -20,11 +23,22 @@ namespace WLO_Translator_WPF
             return new string(charArray);
         }
 
-        public static string GetReplacedPartString(string oldString, string replace, int startPosition, int endPosition)
+        public static string GetStringWithReplacedPart(string oldString, string replace, int startPosition, int endPosition)
         {
             //int textLength = oldString.Length;
             //Console.WriteLine("Text to replace old text with: " + replace);
+            string substring = oldString.Substring(startPosition, endPosition - startPosition);
             return oldString.Remove(startPosition, endPosition - startPosition).Insert(startPosition, replace);
+        }
+
+        public static string GetSubstring(ref string text, int startIndex, int endIndex)
+        {
+            if (startIndex < 0)
+                startIndex = 0;
+            if (endIndex > text.Length - 1)
+                endIndex = text.Length - 1;
+
+            return text.Substring(startIndex, endIndex - startIndex);
         }
 
         public static string GetIDToString(int[] id)
@@ -36,8 +50,8 @@ namespace WLO_Translator_WPF
         {
             char charReplace        = Constants.CHAR_TO_REPLACE_NULL_CHAR;
             char charReplaceOthers  = Constants.CHAR_TO_REPLACE_OTHER_CHAR;
-            return str.Replace((char)10, charReplaceOthers).Replace((char)13, charReplaceOthers).Replace('\0', charReplace).Replace('', charReplaceOthers).
-                Replace('	', charReplaceOthers).Replace('', charReplaceOthers);
+            return str.Replace((char)10, charReplaceOthers).Replace((char)13, charReplaceOthers).Replace('\0', charReplace).
+                Replace('', charReplaceOthers).Replace('	', charReplaceOthers).Replace('', charReplaceOthers);
         }
 
         public static bool IsBytesEqualToString(byte[] bytes, int startIndex, int length, string text)
@@ -192,6 +206,32 @@ namespace WLO_Translator_WPF
             }
 
             return result;
+        }
+
+        public static int GetNullsLeftOfIndex(ref string text, int startIndex, int stopAtIndex = -1)
+        {
+            int nullAmount = 0;
+
+            for (int i = startIndex - 1; i > stopAtIndex; i--)
+            {
+                if (text[i] == '\0')
+                    ++nullAmount;
+                else
+                    break;
+            }
+
+            return nullAmount;
+        }
+
+        public static void MoveSubstring(ref string text, int startIndex, int endIndex, int steps)
+        {
+            //string  textIn1252      = Encoding.GetEncoding(1252).GetString(Encoding.GetEncoding(1252).GetBytes(text));
+            int     substringLength = endIndex - startIndex;
+            string  substring       = text.Substring(startIndex, substringLength);
+            text.Remove(startIndex, substringLength);
+            text.Insert(startIndex + steps, substring);
+
+            //System.Windows.MessageBox.Show(CleanStringFromNewLinesAndBadChars(GetSubstring(ref text, startIndex - 1000, endIndex + 1000)));
         }
 
         public static string GetRichTextBoxText(ref RichTextBox richTextBox)

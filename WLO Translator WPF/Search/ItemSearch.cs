@@ -5,6 +5,15 @@ using System.Windows.Controls;
 
 namespace WLO_Translator_WPF
 {
+    /// <summary>
+    /// The ItemSearch class is used to search for specific items in the found and stored items ListBoxes.
+    /// 
+    /// Usage:
+    /// There is a search box that strings can be typed into that filters items based on criteria such as as which box
+    /// is selected in the drop-down menu. The filtering process is also affected by various check-boxes that filters based on
+    /// critera such as if items contains illegal chars, unconventional chars or if the item has a stored representation with the same
+    /// item ID.
+    /// </summary>
     public static class ItemSearch
     {
         private static List<Item>                   mFoundItemsWhileSearching;
@@ -22,6 +31,7 @@ namespace WLO_Translator_WPF
         //private static bool                       mShowItemsWithSameIDsOld;
         //private static bool                       mShowItemsWithoutMatchOld;
         //private static bool                       mShowItemsWithoutFirstCharBeingALetterOld;
+        private static bool                         mShowItemsWithTooLongTranslationsOld;
 
         public enum SearchOption
         {
@@ -31,6 +41,10 @@ namespace WLO_Translator_WPF
             DEFAULT
         }
 
+        /// <summary>
+        /// Updated the stored and found items that are used to bring back the unfiltered items when the filering options
+        /// are changed by the user.
+        /// </summary>
         public static void UpdateStoredAndFoundItemsWhileSearchingLists(ref ListBox listBoxFoundItems, ref ListBox listBoxStoredItems)
         {
             mFoundItemsWhileSearching           = listBoxFoundItems.ItemsSource.OfType<Item>().ToList();
@@ -56,6 +70,9 @@ namespace WLO_Translator_WPF
             }
         }
 
+        /// <summary>
+        /// Clears the stored items
+        /// </summary>
         public static void ClearStoredItemsWhileSearching()
         {
             mStoredItemsWhileSearching?.Clear();
@@ -63,9 +80,12 @@ namespace WLO_Translator_WPF
             mStoredItemAndDataItemDictionary?.Clear();
         }
 
+        /// <summary>
+        /// Updates old filtering settings so that actions in the filtering process can be skipped if updates don't need to be made.
+        /// </summary>
         private static void UpdateOldVariables(string searchString,
             bool showItemsWithBadChars, bool showItemsWithUnusualChars, bool showItemsWithoutDescriptions, bool showItemsWithSameIDs,
-            bool showItemsWithoutMatch, bool showItemsWithoutFirstCharBeingALetter)
+            bool showItemsWithoutMatch, bool showItemsWithoutFirstCharBeingALetter, bool showItemsWithTooLongTranslationsOld)
         {
             mSearchStringOld                            = searchString;
             mShowItemsWithBadCharsOld                   = showItemsWithBadChars;
@@ -74,27 +94,33 @@ namespace WLO_Translator_WPF
             //mShowItemsWithSameIDsOld                    = showItemsWithSameIDs;
             //mShowItemsWithoutMatchOld                   = showItemsWithoutMatch;
             //mShowItemsWithoutFirstCharBeingALetterOld   = showItemsWithoutFirstCharBeingALetter;
+            mShowItemsWithTooLongTranslationsOld        = showItemsWithTooLongTranslationsOld;
         }
 
-        public static void UpdateVisableItems(ref ListBox listBoxFoundItems, ref ListBox listBoxStoredItems, string searchString,
+        /// <summary>
+        /// Updates which items should be visible in the list boxes depending on which options have been checked by the user and
+        /// whether or not the user have changed the text in the search box.
+        /// </summary>
+        public static void UpdateVisibleItems(ref ListBox listBoxFoundItems, ref ListBox listBoxStoredItems, string searchString,
             bool showItemsWithBadChars, bool showItemsWithUnusualChars, bool showItemsWithoutDescriptions, bool showItemsWithSameIDs,
-            bool showItemsWithoutMatch, bool showItemsWithoutFirstCharBeingALetter, SearchOption searchOption = SearchOption.DEFAULT)
+            bool showItemsWithoutMatch, bool showItemsWithoutFirstCharBeingALetter, bool showItemsWithTooLongTranslations,
+            SearchOption searchOption = SearchOption.DEFAULT)
         {
             if (mFoundItemsWhileSearching == null && mStoredItemsWhileSearching == null)
                 return;
 
-            ObservableCollection<Item> itemSourceFoundItems     = (ObservableCollection<Item>)listBoxFoundItems.ItemsSource;
-            ObservableCollection<Item> itemSourceStoredItems    = (ObservableCollection<Item>)listBoxStoredItems.ItemsSource;
-            ObservableCollection<Item> itemSourceFoundItemsTemporary = new ObservableCollection<Item>();
-            ObservableCollection<Item> itemSourceStoredItemsTemporary = new ObservableCollection<Item>();
-            List<ItemData> itemsStored  = new List<ItemData>();
-            List<ItemData> itemsFound   = new List<ItemData>();
+            ObservableCollection<Item>  itemSourceFoundItems            = (ObservableCollection<Item>)listBoxFoundItems.ItemsSource;
+            ObservableCollection<Item>  itemSourceStoredItems           = (ObservableCollection<Item>)listBoxStoredItems.ItemsSource;
+            ObservableCollection<Item>  itemSourceFoundItemsTemporary   = new ObservableCollection<Item>();
+            ObservableCollection<Item>  itemSourceStoredItemsTemporary  = new ObservableCollection<Item>();
+            List<ItemData>              itemsStored                     = new List<ItemData>();
+            List<ItemData>              itemsFound                      = new List<ItemData>();
 
             if (searchOption != SearchOption.DEFAULT)
                 mSearchOption = searchOption;
 
             if (searchString == "" && !showItemsWithBadChars && !showItemsWithUnusualChars && !showItemsWithoutDescriptions
-                && !showItemsWithSameIDs && !showItemsWithoutMatch && !showItemsWithoutFirstCharBeingALetter
+                && !showItemsWithSameIDs && !showItemsWithoutMatch && !showItemsWithoutFirstCharBeingALetter && !showItemsWithTooLongTranslations
                 && mStoredItemsWhileSearching != null)
             {
                 // Add the "while searching" items back
@@ -122,15 +148,15 @@ namespace WLO_Translator_WPF
                     switch (mSearchOption)
                     {
                         case SearchOption.FOUND_ITEM_NAME:
-                            SearchStoredItems(searchString, ref itemsFound, ref itemsStored,
+                            SearchItemsByString(searchString, ref itemsFound, ref itemsStored,
                                 ref mFoundItemDataWhileSearching, ref mStoredItemDataWhileSearching);
                             break;
                         case SearchOption.STORED_ITEM_NAME:
-                            SearchStoredItems(searchString, ref itemsStored, ref itemsFound,
+                            SearchItemsByString(searchString, ref itemsStored, ref itemsFound,
                                 ref mStoredItemDataWhileSearching, ref mFoundItemDataWhileSearching);
                             break;
                         case SearchOption.ITEM_ID:
-                            SearchStoredItems(searchString, ref itemsFound, ref itemsStored,
+                            SearchItemsByString(searchString, ref itemsFound, ref itemsStored,
                                 ref mFoundItemDataWhileSearching, ref mStoredItemDataWhileSearching, true);
                             OrderListsByID(ref itemsFound);
                             OrderListsByID(ref itemsStored);
@@ -145,10 +171,10 @@ namespace WLO_Translator_WPF
                     {
                         Item itemFound;
                         mFoundItemAndDataItemDictionary.TryGetValue(itemsFound[i], out itemFound);
-                        if ((showItemsWithBadChars && showItemsWithUnusualChars && !itemFound.TextBoxesContainsIllegalChars()
-                                && !itemFound.TextBoxesContainsUnusualChars())
-                            || (showItemsWithBadChars && !showItemsWithUnusualChars && !itemFound.TextBoxesContainsIllegalChars())
-                            || (!showItemsWithBadChars && showItemsWithUnusualChars && !itemFound.TextBoxesContainsUnusualChars()))
+                        if ((showItemsWithBadChars && showItemsWithUnusualChars && !itemFound.IsTextBoxesContainingIllegalChars()
+                                && !itemFound.IsTextBoxesContainingUnusualChars())
+                            || (showItemsWithBadChars && !showItemsWithUnusualChars && !itemFound.IsTextBoxesContainingIllegalChars())
+                            || (!showItemsWithBadChars && showItemsWithUnusualChars && !itemFound.IsTextBoxesContainingUnusualChars()))
                         {
                             itemsFound.RemoveAt(i);
                             --i;
@@ -159,10 +185,37 @@ namespace WLO_Translator_WPF
                     {
                         Item itemStored;
                         mStoredItemAndDataItemDictionary.TryGetValue(itemsStored[i], out itemStored);
-                        if ((showItemsWithBadChars && showItemsWithUnusualChars && !itemStored.TextBoxesContainsIllegalChars()
-                                && !itemStored.TextBoxesContainsUnusualChars())
-                            || (showItemsWithBadChars && !showItemsWithUnusualChars && !itemStored.TextBoxesContainsIllegalChars())
-                            || (!showItemsWithBadChars && showItemsWithUnusualChars && !itemStored.TextBoxesContainsUnusualChars()))
+                        if ((showItemsWithBadChars && showItemsWithUnusualChars && !itemStored.IsTextBoxesContainingIllegalChars()
+                                && !itemStored.IsTextBoxesContainingUnusualChars())
+                            || (showItemsWithBadChars && !showItemsWithUnusualChars && !itemStored.IsTextBoxesContainingIllegalChars())
+                            || (!showItemsWithBadChars && showItemsWithUnusualChars && !itemStored.IsTextBoxesContainingUnusualChars()))
+                        {
+                            itemsStored.RemoveAt(i);
+                            --i;
+                        }
+                    }
+
+                }
+
+                // If showItemsWithTooLongTranslations, remove all items that don't contain too long translations
+                if (showItemsWithTooLongTranslations)
+                {
+                    for (int i = 0; i < itemsFound.Count; ++i)
+                    {
+                        Item itemFound;
+                        mFoundItemAndDataItemDictionary.TryGetValue(itemsFound[i], out itemFound);
+                        if (!itemFound.IsTranslationsTooLong())
+                        {
+                            itemsFound.RemoveAt(i);
+                            --i;
+                        }
+                    }
+
+                    for (int i = 0; i < itemsStored.Count; ++i)
+                    {
+                        Item itemStored;
+                        mStoredItemAndDataItemDictionary.TryGetValue(itemsStored[i], out itemStored);
+                        if (!itemStored.IsTranslationsTooLong())
                         {
                             itemsStored.RemoveAt(i);
                             --i;
@@ -208,6 +261,7 @@ namespace WLO_Translator_WPF
                     }
                 }
 
+                // if showItemsWithoutMatch, remove all items that have matches
                 if (showItemsWithoutMatch)
                 {
                     for (int i = 0; i < mFoundItemDataWhileSearching?.Count; ++i)
@@ -231,6 +285,7 @@ namespace WLO_Translator_WPF
                     }                    
                 }
 
+                // If showItemsWithoutFirstCharBeingALetter, remove all items where the first char is a letter
                 if (showItemsWithoutFirstCharBeingALetter)
                 {
                     for (int i = 0; i < itemsStored.Count; ++i)
@@ -288,10 +343,15 @@ namespace WLO_Translator_WPF
             listBoxStoredItems.ItemsSource  = itemSourceStoredItemsTemporary;
 
             UpdateOldVariables(searchString, showItemsWithBadChars, showItemsWithUnusualChars, showItemsWithoutDescriptions,
-                showItemsWithSameIDs, showItemsWithoutMatch, showItemsWithoutFirstCharBeingALetter);
+                showItemsWithSameIDs, showItemsWithoutMatch, showItemsWithoutFirstCharBeingALetter,
+                showItemsWithTooLongTranslations);
         }
 
-        private static void SearchStoredItems(string searchString, ref List<ItemData> resultSearchList, ref List<ItemData> resultMatchList,
+        /// <summary>
+        /// Search for items those name or ID matches the given search string and add the ones that matched to the result search list.
+        /// This function also adds the corresponding matched item (if found) to the result match list.
+        /// </summary>
+        private static void SearchItemsByString(string searchString, ref List<ItemData> resultSearchList, ref List<ItemData> resultMatchList,
             ref List<ItemData> sourceSearchList, ref List<ItemData> sourceMatchList, bool isSearchForID = false)
         {
             if (!isSearchForID)
@@ -318,45 +378,83 @@ namespace WLO_Translator_WPF
             }            
         }
 
+        /// <summary>
+        /// Stores all the found items into the stored items' ListBox
+        /// </summary>
         public static void StoreAllFoundItems(ref ListBox listBoxStoredItems)
+        {
+            StoreItems(ref listBoxStoredItems, mFoundItemsWhileSearching);
+        }
+
+        /// <summary>
+        /// Stores all the found items into the found items' ListBox
+        /// </summary>
+        public static void StoreSelectedFoundItems(ref ListBox listBoxFoundItems, ref ListBox listBoxStoredItems)
+        {
+            StoreItems(ref listBoxStoredItems, listBoxFoundItems.SelectedItems.Cast<Item>());
+        }
+
+        /// <summary>
+        /// Stores all the items from "items" into the provided ListBox
+        /// </summary>
+        private static void StoreItems(ref ListBox listBoxStoredItems, IEnumerable<Item> items)
         {
             if (mFoundItemsWhileSearching == null || mFoundItemsWhileSearching.Count == 0)
                 return;
 
-            ObservableCollection<Item> itemSourceStoredItems = (ObservableCollection<Item>)listBoxStoredItems.ItemsSource;
-
-            foreach (Item item in mFoundItemsWhileSearching)
+            foreach (Item item in items)
             {
                 if (mStoredItemsWhileSearching.Find((Item itemToCheck) => { return Item.CompareIDs(itemToCheck.ID, item.ID); }) == null)
                 {
-                    itemSourceStoredItems.Add(item.Clone());
-                    mStoredItemsWhileSearching.Add(item.Clone());
+                    Item itemClone = item.Clone();
+                    AddStoredItem(ref itemClone, ref listBoxStoredItems);
                 }
+                //else
+                //{
+                //    //TODO: Update Item Info (?)
+                //}
             }
         }
 
-        public static void StoreSelectedFoundItems(ref ListBox listBoxFoundItems, ref ListBox listBoxStoredItems)
-        {
-            ObservableCollection<Item> itemSourceStoredItems    = (ObservableCollection<Item>)listBoxStoredItems.ItemsSource;
-
-            foreach (Item item in listBoxFoundItems.SelectedItems)
-            {
-                if (mStoredItemsWhileSearching.Find((Item itemToCheck) => { return Item.CompareIDs(itemToCheck.ID, item.ID); }) == null)
-                {
-                    itemSourceStoredItems.Add(item.Clone());
-                    mStoredItemsWhileSearching.Add(item.Clone());
-                }
-            }
-        }
-
+        /// <summary>
+        /// Addes an item to the stored items' ListBox
+        /// </summary>
         public static void AddStoredItem(ref Item item, ref ListBox listBoxStoredItems)
         {
             ObservableCollection<Item> itemSourceStoredItems = (ObservableCollection<Item>)listBoxStoredItems.ItemsSource;
 
-            mStoredItemsWhileSearching.Add(item);
-            itemSourceStoredItems.Add(item);
+            bool insert = false;
+            if (itemSourceStoredItems.Count > 0 && item.ItemStartPosition < itemSourceStoredItems.Last().ItemStartPosition)
+                insert = true;
+
+            ItemData itemData = item.ToItemData();
+
+            if (!insert)
+            {
+                itemSourceStoredItems.Add(item);
+                mStoredItemsWhileSearching.Add(item);                
+                mStoredItemDataWhileSearching.Add(itemData);            // Store the item to the itemData list
+                mStoredItemAndDataItemDictionary.Add(itemData, item);   // Store the item and itemData to the dictionary
+            }
+            else
+            {
+                for (int i = itemSourceStoredItems.Count - 1; i > -1; --i)
+                {
+                    if (item.ItemStartPosition < itemSourceStoredItems[i].ItemStartPosition)
+                    {
+                        itemSourceStoredItems.Insert(i, item);
+                        mStoredItemsWhileSearching.Insert(i, item);
+                        mStoredItemDataWhileSearching.Insert(i, itemData);      // Store the item to the itemData list
+                        mStoredItemAndDataItemDictionary.Add(itemData, item);   // Store the item and itemData to the dictionary
+                        break;
+                    }
+                }
+            }
         }
 
+        /// <summary>
+        /// Deletes the item that is currently the selected one in the stored items' ListBox.
+        /// </summary>
         public static void DeleteSelectedItemFromStoredItems(ref ListBox listBoxStoredItems)
         {
             ObservableCollection<Item> itemSourceStoredItems = (ObservableCollection<Item>)listBoxStoredItems.ItemsSource;
@@ -370,10 +468,10 @@ namespace WLO_Translator_WPF
             mStoredItemAndDataItemDictionary.TryGetValue(storedItemDataWhileSearching, out itemStored);
 
             // Remove the item from memory
-            itemSourceStoredItems.Remove(selectedItem); // Remove the item from the listBox
-            mStoredItemsWhileSearching.Remove(itemStored); // Remove the item from the item list
-            mStoredItemDataWhileSearching.Remove(storedItemDataWhileSearching); // Remove the item from the itemData list
-            mStoredItemAndDataItemDictionary.Remove(storedItemDataWhileSearching); // Remove the item and itemData from the dictionary
+            itemSourceStoredItems.Remove(selectedItem);                             // Remove the item from the listBox
+            mStoredItemsWhileSearching.Remove(itemStored);                          // Remove the item from the item list
+            mStoredItemDataWhileSearching.Remove(storedItemDataWhileSearching);     // Remove the item from the itemData list
+            mStoredItemAndDataItemDictionary.Remove(storedItemDataWhileSearching);  // Remove the item and itemData from the dictionary
 
             // Set focus on the next item
             if (itemSourceStoredItems.Count == 0)
@@ -387,6 +485,9 @@ namespace WLO_Translator_WPF
                 itemSourceStoredItems[selectedIndex - 1].Focus();
         }
 
+        /// <summary>
+        /// Order the list by ID
+        /// </summary>
         private static void OrderListsByID(ref List<ItemData> list)
         {
             list = list.OrderBy((ItemData item) => { return item.GetIDValue(); }).ToList();
