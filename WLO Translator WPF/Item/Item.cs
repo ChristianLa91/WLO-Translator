@@ -257,20 +257,21 @@ namespace WLO_Translator_WPF
     /// </summary>
     public class Item : ListBoxItem, IItemBase
     {
+        private ItemData            ItemData                { get; set; }
         public  string              NameOriginal            { get; private set; }
         private string              mCurrentNameOriginalEncoding; // Used to temporary store the current name with original encoding
-        private string              mName;
-        private int[]               mID;
+        //private string              mName;
+        //private int[]               mID;
         public  string              DescriptionOriginal     { get; private set; }
         private string              mCurrentDescriptionOriginalEncoding; // Used to temporary store the current description with original encoding
-        private string              mDescription;
+        //private string              mDescription;
         // Used for the Mark.dat file
         public  string              Extra1Original          { get; private set; }
         private string              mCurrentExtra1OriginalEncoding; // Used to temporary store the current extra 1 with original encoding
-        private string              mExtra1;
+        //private string              mExtra1;
         public  string              Extra2Original          { get; private set; }
         private string              mCurrentExtra2OriginalEncoding; // Used to temporary store the current extra 2 with original encoding
-        private string              mExtra2;
+        //private string              mExtra2;
 
         private TextBlock           mTextBlockCharsLeft;
         private TextBlock           mTextBlockID;
@@ -290,7 +291,7 @@ namespace WLO_Translator_WPF
         private Button              mButtonJumpToExtra2;
         private CheckBox            mCheckBox;
 
-        public  bool                IsStored                { get; private set; }
+        public  bool                IsStored { get; private set; }
 
         private RoutedEventHandler  mRoutedEventHandlerButtonClickUpdateItem;
         private RoutedEventHandler  mRoutedEventHandlerButtonClickJumpToWholeItem;
@@ -333,15 +334,15 @@ namespace WLO_Translator_WPF
 
         public new string Name
         {
-            get => mName;
+            get => ItemData.Name;
             set
             {
-                mName                       = value;
+                ItemData.Name = value;
 
                 if (NameOriginal == null)
                     NameOriginal = Name;
 
-                mTextBoxName.Text           = mName;
+                mTextBoxName.Text = ItemData.Name;
 
                 ColorTextBoxesBasedOnIllegalOrNonConventionalChars(ref mTextBoxName);
                 ColorTextBoxesIfTranslationsAreTooLong();
@@ -350,21 +351,21 @@ namespace WLO_Translator_WPF
 
         public int[] ID
         {
-            get => mID;
+            get => ItemData.ID;
             set
             {
-                mID = value;
-                mTextBlockID.Text = TextManager.GetIDToString(mID);
+                ItemData.ID         = value;
+                mTextBlockID.Text   = TextManager.GetIDToString(ItemData.ID);
             }
         }
 
         public string Description
         {
-            get => mDescription;
+            get => ItemData.Description;
             set
             {
-                mDescription = value;
-                mTextBoxDescription.Text = mDescription;
+                ItemData.Description = value;
+                mTextBoxDescription.Text = ItemData.Description;
 
                 if (DescriptionOriginal == null)
                     DescriptionOriginal = Description;
@@ -376,14 +377,14 @@ namespace WLO_Translator_WPF
 
         public string Extra1
         {
-            get => mExtra1;
+            get => ItemData.Extra1;
             set
             {
-                mExtra1 = value;
-                mTextBoxExtra1.Text = mExtra1;
+                ItemData.Extra1     = value;
+                mTextBoxExtra1.Text = ItemData.Extra1;
 
                 if (Extra1Original == null)
-                    Extra1Original = Extra1;
+                    Extra1Original  = Extra1;
 
                 ColorTextBoxesBasedOnIllegalOrNonConventionalChars(ref mTextBoxExtra1);
                 ColorTextBoxesIfTranslationsAreTooLong();
@@ -392,11 +393,11 @@ namespace WLO_Translator_WPF
 
         public string Extra2
         {
-            get => mExtra2;
+            get => ItemData.Extra2;
             set
             {
-                mExtra2 = value;
-                mTextBoxExtra2.Text = mExtra2;
+                ItemData.Extra2 = value;
+                mTextBoxExtra2.Text = ItemData.Extra2;
 
                 if (Extra2Original == null)
                     Extra2Original = Extra2;
@@ -496,43 +497,43 @@ namespace WLO_Translator_WPF
         #region Properties
 
         // Positions
-        public int ItemStartPosition            { get; set; }
-        public int ItemEndPosition              { get; set; }
-        public int IDStartPosition              { get; set; }
-        public int IDEndPosition                { get; set; }
-        public int NameStartPosition            { get; set; }
-        public int NameEndPosition              { get; set; }
-        public int DescriptionLengthPosition    { get; set; }
-        public int DescriptionStartPosition     { get; set; }
-        public int DescriptionEndPosition       { get; set; }
-        public int Extra1LengthPosition         { get; set; }
-        public int Extra1StartPosition          { get; set; }
-        public int Extra1EndPosition            { get; set; }
-        public int Extra2LengthPosition         { get; set; }
-        public int Extra2StartPosition          { get; set; }
-        public int Extra2EndPosition            { get; set; }
+        public int ItemStartPosition         { get => ItemData.ItemStartPosition;         set => ItemData.ItemStartPosition         = value; }
+        public int ItemEndPosition           { get => ItemData.ItemEndPosition;           set => ItemData.ItemEndPosition           = value; }
+        public int IDStartPosition           { get => ItemData.IDStartPosition;           set => ItemData.IDStartPosition           = value; }
+        public int IDEndPosition             { get => ItemData.IDEndPosition;             set => ItemData.IDEndPosition             = value; }
+        public int NameStartPosition         { get => ItemData.NameStartPosition;         set => ItemData.NameStartPosition         = value; }
+        public int NameEndPosition           { get => ItemData.NameEndPosition;           set => ItemData.NameEndPosition           = value; }
+        public int DescriptionLengthPosition { get => ItemData.DescriptionLengthPosition; set => ItemData.DescriptionLengthPosition = value; }
+        public int DescriptionStartPosition  { get => ItemData.DescriptionStartPosition;  set => ItemData.DescriptionStartPosition  = value; }
+        public int DescriptionEndPosition    { get => ItemData.DescriptionEndPosition;    set => ItemData.DescriptionEndPosition    = value; }
+        public int Extra1LengthPosition      { get => ItemData.Extra1LengthPosition;      set => ItemData.Extra1LengthPosition      = value; }
+        public int Extra1StartPosition       { get => ItemData.Extra1StartPosition;       set => ItemData.Extra1StartPosition       = value; }
+        public int Extra1EndPosition         { get => ItemData.Extra1EndPosition;         set => ItemData.Extra1EndPosition         = value; }
+        public int Extra2LengthPosition      { get => ItemData.Extra2LengthPosition;      set => ItemData.Extra2LengthPosition      = value; }
+        public int Extra2StartPosition       { get => ItemData.Extra2StartPosition;       set => ItemData.Extra2StartPosition       = value; }
+        public int Extra2EndPosition         { get => ItemData.Extra2EndPosition;         set => ItemData.Extra2EndPosition         = value; }
 
         // Nulls Left
-        public int? NameNullsLeft               { get; set; }
-        public int? DescriptionNullsLeft        { get; set; }
-        public int? Extra1NullsLeft             { get; set; }
-        public int? Extra2NullsLeft             { get; set; }
+        public int? NameNullsLeft            { get; set; }
+        public int? DescriptionNullsLeft     { get; set; }
+        public int? Extra1NullsLeft          { get; set; }
+        public int? Extra2NullsLeft          { get; set; }
 
         // TextBoxes and TextBlocks
-        public  TextBlock TextBlockCharsLeft    { get => mTextBlockCharsLeft; set => mTextBlockCharsLeft = value; }
-        public  TextBlock TextBlockID           { get => mTextBlockID; set => mTextBlockID = value; }
-        public  TextBox TextBoxName             { get => mTextBoxName; set => mTextBoxName = value; }
-        public  TextBox TextBoxDescription      { get => mTextBoxDescription; set => mTextBoxDescription = value; }
-        public  TextBox TextBoxExtra1           { get => mTextBoxExtra1; set => mTextBoxExtra1 = value; }
-        public  TextBox TextBoxExtra2           { get => mTextBoxExtra2; set => mTextBoxExtra2 = value; }
+        public  TextBlock   TextBlockCharsLeft  { get => mTextBlockCharsLeft;   set => mTextBlockCharsLeft  = value; }
+        public  TextBlock   TextBlockID         { get => mTextBlockID;          set => mTextBlockID         = value; }
+        public  TextBox     TextBoxName         { get => mTextBoxName;          set => mTextBoxName         = value; }
+        public  TextBox     TextBoxDescription  { get => mTextBoxDescription;   set => mTextBoxDescription  = value; }
+        public  TextBox     TextBoxExtra1       { get => mTextBoxExtra1;        set => mTextBoxExtra1       = value; }
+        public  TextBox     TextBoxExtra2       { get => mTextBoxExtra2;        set => mTextBoxExtra2       = value; }
 
         // Buttons
-        public  Button ButtonJumpToWholeItem    { get => mButtonJumpToWholeItem; set => mButtonJumpToWholeItem = value; }
-        public  Button ButtonJumpToID           { get => mButtonJumpToID; set => mButtonJumpToID = value; }
-        public  Button ButtonJumpToName         { get => mButtonJumpToName; set => mButtonJumpToName = value; }
-        public  Button ButtonJumpToDescription  { get => mButtonJumpToDescription; set => mButtonJumpToDescription = value; }
-        public  Button ButtonJumpToExtra1       { get => mButtonJumpToExtra1; set => mButtonJumpToExtra1 = value; }
-        public  Button ButtonJumpToExtra2       { get => mButtonJumpToExtra2; set => mButtonJumpToExtra2 = value; }
+        public  Button ButtonJumpToWholeItem    { get => mButtonJumpToWholeItem;    set => mButtonJumpToWholeItem   = value; }
+        public  Button ButtonJumpToID           { get => mButtonJumpToID;           set => mButtonJumpToID          = value; }
+        public  Button ButtonJumpToName         { get => mButtonJumpToName;         set => mButtonJumpToName        = value; }
+        public  Button ButtonJumpToDescription  { get => mButtonJumpToDescription;  set => mButtonJumpToDescription = value; }
+        public  Button ButtonJumpToExtra1       { get => mButtonJumpToExtra1;       set => mButtonJumpToExtra1      = value; }
+        public  Button ButtonJumpToExtra2       { get => mButtonJumpToExtra2;       set => mButtonJumpToExtra2      = value; }
 
         #endregion
 
@@ -546,6 +547,8 @@ namespace WLO_Translator_WPF
             RoutedEventHandler routedEventHandlerButtonClickJumpToExtra1, RoutedEventHandler routedEventHandlerButtonClickJumpToExtra2,
             bool hasDescription, bool hasExtras, bool isStored, bool hasCheckBox = false, RoutedEventHandler routedEventHandlerCheckBoxClick = null) : base()
         {
+            ItemData = new ItemData();
+
             ItemInitialize(routedEventHandlerButtonClickUpdateItem, routedEventHandlerButtonClickJumpToWholeItem,
                 routedEventHandlerButtonClickJumpToID, routedEventHandlerButtonClickJumpToName,
                 routedEventHandlerButtonClickJumpToDescription,
@@ -752,34 +755,34 @@ namespace WLO_Translator_WPF
         /// <summary>
         /// Creates and returns an ItemData object with the item's data.
         /// </summary>
-        public ItemData ToItemData()
+        public ItemData GetItemData()
         {
-            ItemData itemData                   = new ItemData();
+            //ItemData itemData                   = new ItemData();
 
-            itemData.Name                       = Name;
-            itemData.ID                         = ID;
-            itemData.Description                = Description;
-            itemData.Extra1                     = Extra1;
-            itemData.Extra2                     = Extra2;
+            //itemData.Name                       = Name;
+            //itemData.ID                         = ID;
+            //itemData.Description                = Description;
+            //itemData.Extra1                     = Extra1;
+            //itemData.Extra2                     = Extra2;
 
-            itemData.ItemStartPosition          = ItemStartPosition;
-            itemData.ItemEndPosition            = ItemEndPosition;
-            itemData.IDStartPosition            = IDStartPosition;
-            itemData.IDEndPosition              = IDEndPosition;
-            itemData.NameStartPosition          = NameStartPosition;
-            itemData.NameEndPosition            = NameEndPosition;
-            itemData.DescriptionLengthPosition  = DescriptionLengthPosition;
-            itemData.DescriptionStartPosition   = DescriptionStartPosition;
-            itemData.DescriptionEndPosition     = DescriptionEndPosition;
+            //itemData.ItemStartPosition          = ItemStartPosition;
+            //itemData.ItemEndPosition            = ItemEndPosition;
+            //itemData.IDStartPosition            = IDStartPosition;
+            //itemData.IDEndPosition              = IDEndPosition;
+            //itemData.NameStartPosition          = NameStartPosition;
+            //itemData.NameEndPosition            = NameEndPosition;
+            //itemData.DescriptionLengthPosition  = DescriptionLengthPosition;
+            //itemData.DescriptionStartPosition   = DescriptionStartPosition;
+            //itemData.DescriptionEndPosition     = DescriptionEndPosition;
 
-            itemData.Extra1LengthPosition       = Extra1LengthPosition;
-            itemData.Extra1StartPosition        = Extra1StartPosition;
-            itemData.Extra1EndPosition          = Extra1EndPosition;
-            itemData.Extra2LengthPosition       = Extra2LengthPosition;
-            itemData.Extra2StartPosition        = Extra2StartPosition;
-            itemData.Extra2EndPosition          = Extra2EndPosition;
+            //itemData.Extra1LengthPosition       = Extra1LengthPosition;
+            //itemData.Extra1StartPosition        = Extra1StartPosition;
+            //itemData.Extra1EndPosition          = Extra1EndPosition;
+            //itemData.Extra2LengthPosition       = Extra2LengthPosition;
+            //itemData.Extra2StartPosition        = Extra2StartPosition;
+            //itemData.Extra2EndPosition          = Extra2EndPosition;
 
-            return itemData;
+            return ItemData;
         }
 
         /// <summary>
@@ -796,11 +799,11 @@ namespace WLO_Translator_WPF
             itemClone.IsCheckingTooLongTranslations = false;
 
             // Ints and strings
-            itemClone.ID                        = mID;
-            itemClone.Name                      = mName;
-            itemClone.Description               = mDescription;
-            itemClone.Extra1                    = mExtra1;
-            itemClone.Extra2                    = mExtra2;
+            itemClone.ID                        = ItemData.ID;
+            itemClone.Name                      = ItemData.Name;
+            itemClone.Description               = ItemData.Description;
+            itemClone.Extra1                    = ItemData.Extra1;
+            itemClone.Extra2                    = ItemData.Extra2;
 
             // TextBoxes and TextBlocks
             itemClone.TextBlockCharsLeft        = mTextBlockCharsLeft;
@@ -856,14 +859,17 @@ namespace WLO_Translator_WPF
         {
             Dictionary<string, object> value;
             if (HasExtras)
-                value = new Dictionary<string, object> { { "ID", TextManager.GetIDToString(mID) },
-                        { "Name", mName }, { "Description", mDescription }, { "Extra1", mExtra1 }, { "Extra2", mExtra2 } };
+                value = new Dictionary<string, object> { { "ID", TextManager.GetIDToString(ItemData.ID) },
+                        { "Name", ItemData.Name }, { "Description", ItemData.Description }, { "Extra1", ItemData.Extra1 },
+                        { "Extra2", ItemData.Extra2 } };
             else if (HasDescription)
-                value = new Dictionary<string, object> { { "ID", TextManager.GetIDToString(mID) },
-                        { "Name", mName }, { "Description", mDescription }, { "Extra1", mExtra1 }, { "Extra2", mExtra2 } };
+                value = new Dictionary<string, object> { { "ID", TextManager.GetIDToString(ItemData.ID) },
+                        { "Name", ItemData.Name }, { "Description", ItemData.Description }, { "Extra1", ItemData.Extra1 },
+                        { "Extra2", ItemData.Extra2 } };
             else
-                value = new Dictionary<string, object> { { "ID", TextManager.GetIDToString(mID) },
-                        { "Name", mName }, { "Description", mDescription }, { "Extra1", mExtra1 }, { "Extra2", mExtra2 } };
+                value = new Dictionary<string, object> { { "ID", TextManager.GetIDToString(ItemData.ID) },
+                        { "Name", ItemData.Name }, { "Description", ItemData.Description }, { "Extra1", ItemData.Extra1 },
+                        { "Extra2", ItemData.Extra2 } };
 
             return value;
         }
