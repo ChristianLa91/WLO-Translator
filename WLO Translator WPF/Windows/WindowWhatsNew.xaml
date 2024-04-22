@@ -11,7 +11,7 @@
             <FlowDocument>
                 <Paragraph>
                     <Run Text="Version 1.0.6&#x0a;--------------
-                         &#x0a;* Now items storage has been improved
+                         &#x0a;* Items storage has been improved
                          &#x0a;* Set a temporary (?) name length to 14, changed so it's only for the
                          &#x0a;   Items file
                          &#x0a;&#x0a;Version 1.0.5&#x0a;--------------

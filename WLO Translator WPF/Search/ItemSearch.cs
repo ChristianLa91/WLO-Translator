@@ -57,14 +57,14 @@ namespace WLO_Translator_WPF
 
             foreach (Item item in mFoundItemsWhileSearching)
             {
-                ItemData itemData = item.ToItemData();
+                ItemData itemData = item.GetItemData();
                 mFoundItemDataWhileSearching.Add(itemData);
                 mFoundItemAndDataItemDictionary.Add(itemData, item);
             }
 
             foreach (Item item in mStoredItemsWhileSearching)
             {
-                ItemData itemData = item.ToItemData();
+                ItemData itemData = item.GetItemData();
                 mStoredItemDataWhileSearching.Add(itemData);
                 mStoredItemAndDataItemDictionary.Add(itemData, item);
             }
@@ -427,7 +427,7 @@ namespace WLO_Translator_WPF
             if (itemSourceStoredItems.Count > 0 && item.ItemStartPosition < itemSourceStoredItems.Last().ItemStartPosition)
                 insert = true;
 
-            ItemData itemData = item.ToItemData();
+            ItemData itemData = item.GetItemData();
 
             if (!insert)
             {

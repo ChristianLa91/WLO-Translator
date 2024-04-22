@@ -1,9 +1,11 @@
 ﻿using Microsoft.Win32;
+using MiniExcelLibs;
 using ScintillaNET.WPF;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Data;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -739,7 +741,10 @@ namespace WLO_Translator_WPF
             string fileName = arguments[0] as string;
             bool isMultiTranslator = (bool)arguments[1];
 
-            CollectFoundItemDataAsync(fileName, isMultiTranslator).Wait();
+            if (FileItemProperties.FileType != FileType.ALOGINEXE)
+                CollectFoundItemDataAsync(fileName, isMultiTranslator).Wait();
+            else
+                CollectFoundALoginDataAsync(fileName, isMultiTranslator).Wait();
 
             e.Result = new object[] { fileName, isMultiTranslator };
         }
@@ -895,6 +900,69 @@ namespace WLO_Translator_WPF
                 task.Dispose();
                 ++taskIndex;
             }
+
+            ReportProgress(ref foundItemsToAdd, bytes.Length, isMultiTranslator, false);
+        }
+
+        /// <summary>
+        /// Task (thread) function that asynchronically handles the found item data collection.
+        /// </summary>
+        public async Task CollectFoundALoginDataAsync(string fileName, bool isMultiTranslator)
+        {
+            Thread.Sleep(50);
+
+            // Load Data
+            FileStream  fileStream      = File.OpenRead(fileName);
+            byte[]      bytes           = new byte[fileStream.Length];
+            int         readBytesAmount = fileStream.Read(bytes, 0, (int)fileStream.Length);
+
+            mFoundItemsToAdd = new List<ItemData>();
+            List<ItemData> foundItemsToAdd = new List<ItemData>();
+
+            mDispatcher.Invoke(() =>
+            {
+                LoadingBarManager.ShowOrInitializeLoadingBar("Found", 0d, FileItemProperties, bytes.Length);
+                mOpenFileData = bytes;
+            });
+
+            LoadingBarManager.WaitUntilValueHasChanged();
+
+            int startOffset = 0, idOffset = 0;
+            DateTime lastReportedTime = DateTime.Now;
+
+            //TODO: Load in data with excel reader
+
+            //ImportItemsFromExcelDocument("")
+
+            // Get result
+            //List<ItemData> result;
+            //itemDataTasks.Reverse();
+            //int progress = 0;
+            //int taskIndex = 0;
+            //foreach (Task<List<ItemData>> task in itemDataTasks)
+            //{
+            //    result = await task;
+            //    if (task.Exception != null)
+            //        MessageBox.Show("Task Exception: " + task.Exception.Message);
+            //    foreach (ItemData itemData in result)
+            //    {
+            //        if (itemData != null)
+            //        {
+            //            foundItemsToAdd.Add(itemData);
+            //            //Console.WriteLine("Completed Collection of Found Item With Name: " + itemData.Name);
+            //        }
+            //        //else
+            //        //Console.WriteLine("Uncompleted Collection of Item");
+            //    }
+            //    progress += dataPerTask;
+            //    if (progress >= bytes.Length / 5)
+            //    {
+            //        ReportProgress(ref foundItemsToAdd, progress, isMultiTranslator, false);
+            //        progress = 0;
+            //    }
+            //    task.Dispose();
+            //    ++taskIndex;
+            //}
 
             ReportProgress(ref foundItemsToAdd, bytes.Length, isMultiTranslator, false);
         }
@@ -1366,9 +1434,84 @@ namespace WLO_Translator_WPF
                     stringLists.Add(item.GetExcelTextExportList());
                 }
 
-                MiniExcelLibs.MiniExcel.SaveAs(saveFileDialog.FileName, stringLists);
+                MiniExcel.SaveAs(saveFileDialog.FileName, stringLists);
 
                 mLabelReportInfo.Content = "Export Stored Items as an Excel Document at \"" + saveFileDialog.FileName + "\"";
+            }
+        }
+
+        /// <summary>
+        /// Imports items into the provided listBox to a path chosen by the user as an excel-document.
+        /// </summary>
+        public void ImportItemsFromExcelDocument(string path, ref ListBox listBox, bool isMultiTranslator)
+        {
+            if (FileItemProperties.FileType == FileType.NULL)
+                return;
+
+            OpenFileDialog openFileDialog   = new OpenFileDialog();
+            openFileDialog.DefaultExt       = ".xlsx";
+            openFileDialog.Filter           = "Excel File|.xlsx";
+            openFileDialog.Title            = "Import Items from Excel File";
+
+            if (openFileDialog.ShowDialog() == true)
+            {
+                MiniExcelDataReader excelDataReader = MiniExcel.GetReader(openFileDialog.FileName, false, null, ExcelType.UNKNOWN, "B1");
+
+                while (excelDataReader.Read())
+                {
+                    ItemData currentItemData = new ItemData();
+
+                    string idString = excelDataReader.GetString(0);
+
+                    //HEX-ID, text, text, char max-length?, char max-length, nothing, Mixed bytes type!
+                    currentItemData.ID          = new int[] { int.Parse(idString.Substring(0, 2)), int.Parse(idString.Substring(2, 2)), 
+                                                              int.Parse(idString.Substring(4, 2)) };
+                    currentItemData.Name        = excelDataReader.GetString(1);
+                    currentItemData.Description = excelDataReader.GetString(2);
+
+                    // Positions
+                    //currentItemData.ItemStartPosition           = int.Parse(reader.GetAttribute("ItemStartPosition"));
+                    //currentItemData.ItemEndPosition             = int.Parse(reader.GetAttribute("ItemEndPosition"));
+                    //currentItemData.IDStartPosition             = int.Parse(reader.GetAttribute("IDStartPosition"));
+                    //currentItemData.IDEndPosition               = int.Parse(reader.GetAttribute("IDEndPosition"));
+                    //currentItemData.NameStartPosition           = int.Parse(reader.GetAttribute("NameStartPosition"));
+                    //currentItemData.NameEndPosition             = int.Parse(reader.GetAttribute("NameEndPosition"));
+                    //currentItemData.DescriptionStartPosition    = int.Parse(reader.GetAttribute("DescriptionStartPosition"));
+                    //currentItemData.DescriptionEndPosition      = int.Parse(reader.GetAttribute("DescriptionEndPosition"));
+                    //currentItemData.Extra1StartPosition         = int.Parse(reader.GetAttribute("Extra1StartPosition"));
+                    //currentItemData.Extra1EndPosition           = int.Parse(reader.GetAttribute("Extra1EndPosition"));
+                    //currentItemData.Extra2StartPosition         = int.Parse(reader.GetAttribute("Extra2StartPosition"));
+                    //currentItemData.Extra2EndPosition           = int.Parse(reader.GetAttribute("Extra2EndPosition"));
+
+                    // Get nulls left
+                    if (isMultiTranslator)
+                    {
+                        ItemData foundItemData = mFoundItemsToAdd.FirstOrDefault((ItemData itemFound) =>
+                        {
+                            return Item.CompareIDs(itemFound.ID, currentItemData.ID);
+                        });
+
+                        if (currentItemData != null)
+                            ItemManager.SetNullLength(foundItemData, currentItemData);
+                    }
+                    else
+                    {
+                        mDispatcher.Invoke(() =>
+                        {
+                            Item foundItem = mItemSourceListBoxFoundItemsTemporary.FirstOrDefault((Item itemFound) =>
+                            {
+                                return Item.CompareIDs(itemFound.ID, currentItemData.ID);
+                            });
+
+                            if (foundItem != null)
+                                ItemManager.SetNullLength(foundItem, currentItemData);
+                        });
+                    }
+
+                    mStoredItemsToAdd.Add(currentItemData);
+                }
+
+                //mLabelReportInfo.Content = "Export Stored Items as an Excel Document at \"" + openFileDialog.FileName + "\"";
             }
         }
 

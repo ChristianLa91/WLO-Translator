@@ -288,7 +288,7 @@ namespace WLO_Translator_WPF
                     {
                         if (item.IsChecked == true)
                         {
-                            InsertItemAtDataPositionOrder(storedItemData, item.ToItemData());
+                            InsertItemAtDataPositionOrder(storedItemData, item.GetItemData());
                             hasStored = true;
                         }
                     }

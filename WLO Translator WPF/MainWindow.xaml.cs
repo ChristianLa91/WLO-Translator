@@ -531,11 +531,11 @@ namespace WLO_Translator_WPF
 
             List<ItemData> foundItemData = new List<ItemData>();
             foreach (Item item in ListBoxFoundItems.Items)
-                foundItemData.Add(item.ToItemData());
+                foundItemData.Add(item.GetItemData());
 
             List<ItemData> storedItemData = new List<ItemData>();
             foreach (Item item in ListBoxStoredItems.Items)
-                storedItemData.Add(item.ToItemData());
+                storedItemData.Add(item.GetItemData());
             _ = BeginTranslateAsync(mFileManager.OpenFileText, foundItemData, storedItemData);
         }
 
