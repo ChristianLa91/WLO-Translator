@@ -387,6 +387,7 @@
     <Compile Include="Item\FoundItemDataCollection.cs" />
     <Compile Include="IO\Database.cs" />
     <Compile Include="IO\MouseOperations.cs" />
+    <Compile Include="Item\ItemALoginData.cs" />
     <Compile Include="Item\ItemManager.cs" />
     <Compile Include="MultiTranslator\TreeViewItemMT.cs" />
     <Compile Include="MultiTranslator\ListBoxItemMT.cs" />

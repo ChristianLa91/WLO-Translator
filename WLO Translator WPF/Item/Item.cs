@@ -449,29 +449,32 @@ namespace WLO_Translator_WPF
                 nameLengthTooLong = true;
 #endif
 
-            if (charsLeft < 0 || nameLengthTooLong)
+            if (FileManager.FileItemProperties.FileType == FileType.ITEM)
             {
-                mTextBoxName.Background = Brushes.Gray;
-                if (HasDescription)
-                    mTextBoxDescription.Background = Brushes.Gray;
-                if (HasExtras)
+                if (charsLeft < 0 || nameLengthTooLong)
                 {
-                    mTextBoxExtra1.Background = Brushes.Gray;
-                    mTextBoxExtra2.Background = Brushes.Gray;
+                    mTextBoxName.Background = Brushes.Gray;
+                    if (HasDescription)
+                        mTextBoxDescription.Background = Brushes.Gray;
+                    if (HasExtras)
+                    {
+                        mTextBoxExtra1.Background = Brushes.Gray;
+                        mTextBoxExtra2.Background = Brushes.Gray;
+                    }
                 }
-            }
-            else
-            {
-                if (mTextBoxName.Background == Brushes.Gray)
-                    mTextBoxName.Background = Brushes.Transparent;
-                if (HasDescription && mTextBoxDescription.Background == Brushes.Gray)
-                    mTextBoxDescription.Background = Brushes.Transparent;
-                if (HasExtras)
+                else
                 {
-                    if (mTextBoxExtra1.Background == Brushes.Gray)
-                        mTextBoxExtra1.Background = Brushes.Transparent;
-                    if (mTextBoxExtra2.Background == Brushes.Gray)
-                        mTextBoxExtra2.Background = Brushes.Transparent;
+                    if (mTextBoxName.Background == Brushes.Gray)
+                        mTextBoxName.Background = Brushes.Transparent;
+                    if (HasDescription && mTextBoxDescription.Background == Brushes.Gray)
+                        mTextBoxDescription.Background = Brushes.Transparent;
+                    if (HasExtras)
+                    {
+                        if (mTextBoxExtra1.Background == Brushes.Gray)
+                            mTextBoxExtra1.Background = Brushes.Transparent;
+                        if (mTextBoxExtra2.Background == Brushes.Gray)
+                            mTextBoxExtra2.Background = Brushes.Transparent;
+                    }
                 }
             }
         }

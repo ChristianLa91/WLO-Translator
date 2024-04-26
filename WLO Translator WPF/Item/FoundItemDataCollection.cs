@@ -181,6 +181,8 @@ namespace WLO_Translator_WPF
                 throw new ArgumentException("ERROR: Collection State Not Equal to DESCRIPTION_LENGTH");
 
             index += mFileItemProperties.AfterNameToDescriptionLength - 1;
+            if (index > mBytes.Length - 1)
+                index = mBytes.Length - 1;
             ItemDescriptionLength = mBytes[index];
 
             // If the description length becomes 0, decrease i by 1 and get the new description length from that position

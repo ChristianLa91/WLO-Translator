@@ -10,7 +10,9 @@
         <RichTextBox x:Name="RichTextBoxWhatsNew" Margin="10,10,10,57" Padding="20" VerticalScrollBarVisibility="Auto">
             <FlowDocument>
                 <Paragraph>
-                    <Run Text="Version 1.0.6&#x0a;--------------
+                    <Run Text="Version 1.0.7&#x0a;--------------
+                         &#x0a;* Removed character limit for all files but Item.dat
+                         &#x0a;&#x0a;Version 1.0.6&#x0a;--------------
                          &#x0a;* Items storage has been improved
                          &#x0a;* Set a temporary (?) name length to 14, changed so it's only for the
                          &#x0a;   Items file

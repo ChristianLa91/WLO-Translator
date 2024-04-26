@@ -116,6 +116,7 @@ namespace WLO_Translator_WPF
         private BackgroundWorker            mBackgroundWorkerFoundItemData;
         private List<ItemData>              mFoundItemsToAdd;
         private List<ItemData>              mStoredItemsToAdd;
+        private List<ItemALoginData>        mStoredALoginItemsToAdd;
         public  List<ItemData>              GetFoundItems()     { return mFoundItemsToAdd; }
         public  List<ItemData>              GetStoredItems()    { return mStoredItemsToAdd; }
 
@@ -844,7 +845,10 @@ namespace WLO_Translator_WPF
                 List<ItemDataPart> itemDataParts = new List<ItemDataPart>();
                 for (int j = i; j < i + dataPerTask; j += lengthPerItem)
                 {
-                    itemDataParts.Add(new ItemDataPart(j, j + lengthPerItem));
+                    int endIndex = j + lengthPerItem;
+                    if (endIndex > bytes.Length - 1)
+                        endIndex = bytes.Length - 1;
+                    itemDataParts.Add(new ItemDataPart(j, endIndex));
                 }
 
                 itemDataPartStack.Push(itemDataParts);
@@ -1307,7 +1311,7 @@ namespace WLO_Translator_WPF
                             IsSorted = false;
                             Console.WriteLine("ItemEndPosition >= ItemStartPosition");
 #if DEBUG
-                            MessageBox.Show("ItemEndPosition >= ItemStartPosition");
+                            //MessageBox.Show("ItemEndPosition >= ItemStartPosition");
 #endif
                         }
                     }
@@ -1459,15 +1463,14 @@ namespace WLO_Translator_WPF
 
                 while (excelDataReader.Read())
                 {
-                    ItemData currentItemData = new ItemData();
+                    ItemALoginData itemALoginData = new ItemALoginData();
 
                     string idString = excelDataReader.GetString(0);
 
                     //HEX-ID, text, text, char max-length?, char max-length, nothing, Mixed bytes type!
-                    currentItemData.ID          = new int[] { int.Parse(idString.Substring(0, 2)), int.Parse(idString.Substring(2, 2)), 
-                                                              int.Parse(idString.Substring(4, 2)) };
-                    currentItemData.Name        = excelDataReader.GetString(1);
-                    currentItemData.Description = excelDataReader.GetString(2);
+                    itemALoginData.Text1StartPosition = excelDataReader.GetInt32(0);
+                    itemALoginData.Text1    = excelDataReader.GetString(1);
+                    itemALoginData.Text2    = excelDataReader.GetString(2);
 
                     // Positions
                     //currentItemData.ItemStartPosition           = int.Parse(reader.GetAttribute("ItemStartPosition"));
@@ -1483,32 +1486,8 @@ namespace WLO_Translator_WPF
                     //currentItemData.Extra2StartPosition         = int.Parse(reader.GetAttribute("Extra2StartPosition"));
                     //currentItemData.Extra2EndPosition           = int.Parse(reader.GetAttribute("Extra2EndPosition"));
 
-                    // Get nulls left
-                    if (isMultiTranslator)
-                    {
-                        ItemData foundItemData = mFoundItemsToAdd.FirstOrDefault((ItemData itemFound) =>
-                        {
-                            return Item.CompareIDs(itemFound.ID, currentItemData.ID);
-                        });
 
-                        if (currentItemData != null)
-                            ItemManager.SetNullLength(foundItemData, currentItemData);
-                    }
-                    else
-                    {
-                        mDispatcher.Invoke(() =>
-                        {
-                            Item foundItem = mItemSourceListBoxFoundItemsTemporary.FirstOrDefault((Item itemFound) =>
-                            {
-                                return Item.CompareIDs(itemFound.ID, currentItemData.ID);
-                            });
-
-                            if (foundItem != null)
-                                ItemManager.SetNullLength(foundItem, currentItemData);
-                        });
-                    }
-
-                    mStoredItemsToAdd.Add(currentItemData);
+                    mStoredALoginItemsToAdd.Add(itemALoginData);
                 }
 
                 //mLabelReportInfo.Content = "Export Stored Items as an Excel Document at \"" + openFileDialog.FileName + "\"";
