@@ -56,7 +56,6 @@ namespace WLO_Translator_WPF
                     if (DataCollectionState == DataCollectionStates.NAME_LENGTH)
                     {
                         itemStartPosition = i;
-
                         CollectNameLength(i);
                     }
                     else if (DataCollectionState == DataCollectionStates.NAME_AND_ID)

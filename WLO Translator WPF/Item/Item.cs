@@ -355,7 +355,8 @@ namespace WLO_Translator_WPF
             set
             {
                 ItemData.ID         = value;
-                mTextBlockID.Text   = TextManager.GetIDToString(ItemData.ID);
+                if (ItemData.ID != null)
+                    mTextBlockID.Text   = TextManager.GetIDToString(ItemData.ID);
             }
         }
 
@@ -548,7 +549,8 @@ namespace WLO_Translator_WPF
             RoutedEventHandler routedEventHandlerButtonClickJumpToID, RoutedEventHandler routedEventHandlerButtonClickJumpToName,
             RoutedEventHandler routedEventHandlerButtonClickJumpToDescription,
             RoutedEventHandler routedEventHandlerButtonClickJumpToExtra1, RoutedEventHandler routedEventHandlerButtonClickJumpToExtra2,
-            bool hasDescription, bool hasExtras, bool isStored, bool hasCheckBox = false, RoutedEventHandler routedEventHandlerCheckBoxClick = null) : base()
+            bool hasDescription, bool hasExtras, bool isStored, bool hasCheckBox = false,
+            RoutedEventHandler routedEventHandlerCheckBoxClick = null) : base()
         {
             ItemData = new ItemData();
 
@@ -567,7 +569,8 @@ namespace WLO_Translator_WPF
             RoutedEventHandler routedEventHandlerButtonClickJumpToID, RoutedEventHandler routedEventHandlerButtonClickJumpToName,
             RoutedEventHandler routedEventHandlerButtonClickJumpToDescription,
             RoutedEventHandler routedEventHandlerButtonClickJumpToExtra1, RoutedEventHandler routedEventHandlerButtonClickJumpToExtra2,
-            bool hasDescription, bool hasExtras, bool isStored, bool hasCheckBox = false, RoutedEventHandler routedEventHandlerCheckBoxClick = null)
+            bool hasDescription, bool hasExtras, bool isStored, bool hasCheckBox = false,
+            RoutedEventHandler routedEventHandlerCheckBoxClick = null)
         {
             IsStored                            = isStored;
 
@@ -672,9 +675,9 @@ namespace WLO_Translator_WPF
             {
                 mCheckBox = new CheckBox()
                 {
-                    VerticalAlignment = VerticalAlignment.Center,
-                    Margin = new Thickness(0, 0, 10, 0),
-                    Tag = this
+                    VerticalAlignment   = VerticalAlignment.Center,
+                    Margin              = new Thickness(0, 0, 10, 0),
+                    Tag                 = this
                 };
 
                 if (routedEventHandlerCheckBoxClick != null)
@@ -758,35 +761,7 @@ namespace WLO_Translator_WPF
         /// <summary>
         /// Creates and returns an ItemData object with the item's data.
         /// </summary>
-        public ItemData GetItemData()
-        {
-            //ItemData itemData                   = new ItemData();
-
-            //itemData.Name                       = Name;
-            //itemData.ID                         = ID;
-            //itemData.Description                = Description;
-            //itemData.Extra1                     = Extra1;
-            //itemData.Extra2                     = Extra2;
-
-            //itemData.ItemStartPosition          = ItemStartPosition;
-            //itemData.ItemEndPosition            = ItemEndPosition;
-            //itemData.IDStartPosition            = IDStartPosition;
-            //itemData.IDEndPosition              = IDEndPosition;
-            //itemData.NameStartPosition          = NameStartPosition;
-            //itemData.NameEndPosition            = NameEndPosition;
-            //itemData.DescriptionLengthPosition  = DescriptionLengthPosition;
-            //itemData.DescriptionStartPosition   = DescriptionStartPosition;
-            //itemData.DescriptionEndPosition     = DescriptionEndPosition;
-
-            //itemData.Extra1LengthPosition       = Extra1LengthPosition;
-            //itemData.Extra1StartPosition        = Extra1StartPosition;
-            //itemData.Extra1EndPosition          = Extra1EndPosition;
-            //itemData.Extra2LengthPosition       = Extra2LengthPosition;
-            //itemData.Extra2StartPosition        = Extra2StartPosition;
-            //itemData.Extra2EndPosition          = Extra2EndPosition;
-
-            return ItemData;
-        }
+        public ItemData GetItemData() { return ItemData; }
 
         /// <summary>
         /// Creates a clone/copy of the item
@@ -882,6 +857,9 @@ namespace WLO_Translator_WPF
         /// </summary>
         public static bool CompareIDs(int[] firstID, int[] secondID)
         {
+            if (firstID == null || secondID == null)
+                return false;
+
             for (int i = 0; i < firstID.Length; ++i)
             {
                 if (firstID[i] != secondID[i])

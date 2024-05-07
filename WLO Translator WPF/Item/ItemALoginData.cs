@@ -13,13 +13,13 @@ namespace WLO_Translator_WPF
         {
         }
 
-        public string   Text1               { get; set; }
-        public string   Text2               { get; set; }
-        public int      ItemStartPosition   { get; set; }
-        public int      ItemEndPosition     { get; set; }
-        public int      Text1StartPosition  { get; set; }
-        public int      Text1EndPosition    { get; set; }
-        public int      Text2StartPosition  { get; set; }
-        public int      Text2EndPosition    { get; set; }
+        public string   TextOriginalOriginalEncoding    { get; set; }
+        public string   TextReplaceOriginalEncoding     { get; set; }
+
+        public string   TextOriginal                    { get; set; }
+        public string   TextReplace                     { get; set; }
+        public int      ItemStartPosition               { get; set; }
+        public int      TextOriginalLength              { get; set; }
+        public int      TextReplaceLength               { get; set; }
     }
 }

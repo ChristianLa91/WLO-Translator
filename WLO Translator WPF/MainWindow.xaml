@@ -137,7 +137,7 @@
         <BitmapImage x:Key="Button Close Black" x:Name="BitmapImageButtonCloseBlack" UriSource="Images/Top Bar Buttons/Button Close Black.png"/>
         <BitmapImage x:Key="Button Close White" x:Name="BitmapImageButtonCloseWhite" UriSource="Images/Top Bar Buttons/Button Close White.png"/>
 
-        <ContextMenu x:Key="ItemRightClickMenu">
+        <ContextMenu x:Key="FoundItemRightClickMenu">
             <MenuItem x:Name="MenuItemUpdate" Header="Update Item"></MenuItem>
             <Separator/>
             <MenuItem x:Name="MenuItemJumpToWholeItem" Header="Jump to Whole Item"></MenuItem>
@@ -147,7 +147,12 @@
             <MenuItem x:Name="MenuItemJumpToExtra1" Header="Jump to Extra 1" IsEnabled="False" Visibility="Collapsed"></MenuItem>
             <MenuItem x:Name="MenuItemJumpToExtra2" Header="Jump to Extra 2" IsEnabled="False" Visibility="Collapsed"></MenuItem>
             <Separator/>
-            <MenuItem x:Name="MenuItemCopyItemID" Header="Copy Item ID"></MenuItem>
+            <MenuItem x:Name="MenuItemCopyFoundItemID" Header="Copy Item ID"></MenuItem>
+        </ContextMenu>
+
+        <ContextMenu x:Key="StoredItemRightClickMenu">
+            <MenuItem x:Name="MenuItemScrollToMatchingFoundItem" Header="Scroll to Matching Found Item"></MenuItem>
+            <MenuItem x:Name="MenuItemCopyStoredItemID" Header="Copy Item ID"></MenuItem>
         </ContextMenu>
 
         <!--<ContextMenu x:Key="TopBarRightClickMenu" x:Name="TopBarRightClickMenu">
@@ -254,7 +259,7 @@
                 <GridSplitter x:Name="GridSplitterRight" Grid.Column="2" HorizontalAlignment="Left" Width="10" BorderBrush="#FFF0F0F0" BorderThickness="0" Margin="-5,0,0,0" Background="#00000000"></GridSplitter>
                 <Grid x:Name="GridFrontRight" Grid.Column="2" Background="#FFFBFBFB" Margin="5,0,0,0">
                     <Label x:Name="LabelStoredItems" Content="Stored Items" Margin="5,130,0,0" VerticalAlignment="Top" Height="26" HorizontalAlignment="Left" Width="92"/>
-                    <ListBox x:Name="ListBoxStoredItems" VirtualizingStackPanel.IsVirtualizing="True" VirtualizingStackPanel.VirtualizationMode="Standard" Margin="10,156,15,30" FontFamily="Courier New" KeyDown="ListBoxStoredItems_KeyDown"/>
+                    <ListBox x:Name="ListBoxStoredItems" VirtualizingStackPanel.IsVirtualizing="True" VirtualizingStackPanel.VirtualizationMode="Standard" Margin="10,156,15,30" FontFamily="Courier New" KeyDown="ListBoxStoredItems_KeyDown" MouseRightButtonUp="ListBoxStoredItems_MouseRightButtonUp"/>
                     <Button x:Name="ButtonClearStoredItems" Margin="10,108,0,0" VerticalAlignment="Top" Height="23" Click="ButtonClearStoredItems_Click" HorizontalAlignment="Left" Width="138" HorizontalContentAlignment="Left">
                         <StackPanel Orientation="Horizontal">
                             <Image Source="Images/Clear all Items.png" Stretch="Fill" Margin="3"/>

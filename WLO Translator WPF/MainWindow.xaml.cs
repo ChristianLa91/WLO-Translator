@@ -103,20 +103,25 @@ namespace WLO_Translator_WPF
 
         private void ListBoxFoundItems_MouseRightButtonUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
-            OpenItemRightClickMenu((Item)ListBoxFoundItems.SelectedItem);
+            OpenFoundItemRightClickMenu((Item)ListBoxFoundItems.SelectedItem);
         }
 
-        private void OpenItemRightClickMenu(Item item)
+        private void ListBoxStoredItems_MouseRightButtonUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
-            ContextMenu itemRightClickMenu = (ContextMenu)FindResource("ItemRightClickMenu");
+            OpenStoredItemRightClickMenu((Item)ListBoxStoredItems.SelectedItem);
+        }
+
+        private void OpenFoundItemRightClickMenu(Item item)
+        {
+            ContextMenu itemRightClickMenu = (ContextMenu)FindResource("FoundItemRightClickMenu");
 
             foreach (object itemObject in itemRightClickMenu.Items)
             {
                 if (itemObject.GetType() != typeof(MenuItem))
                     continue;
 
-                MenuItem menuItem = (MenuItem)itemObject;
-                menuItem.Tag = item;
+                MenuItem menuItem   = (MenuItem)itemObject;
+                menuItem.Tag        = item;
                 switch (menuItem.Name)
                 {
                     case "MenuItemUpdate":
@@ -140,14 +145,40 @@ namespace WLO_Translator_WPF
                     case "MenuItemJumpToExtra2":
                         menuItem.Click += ButtonJumpToExtra2_Click;
                         break;
-                    case "MenuItemCopyItemID":
-                        menuItem.Click += ButtonCopyItemID_Click;
+                    case "MenuItemCopyFoundItemID":
+                        menuItem.Click += ButtonCopyFoundItemID_Click;
                         break;
                 }
             }
 
-            itemRightClickMenu.Placement = System.Windows.Controls.Primitives.PlacementMode.MousePoint;
-            itemRightClickMenu.IsOpen = true;
+            itemRightClickMenu.Placement    = System.Windows.Controls.Primitives.PlacementMode.MousePoint;
+            itemRightClickMenu.IsOpen       = true;
+        }
+
+        private void OpenStoredItemRightClickMenu(Item item)
+        {
+            ContextMenu itemRightClickMenu = (ContextMenu)FindResource("StoredItemRightClickMenu");
+
+            foreach (object itemObject in itemRightClickMenu.Items)
+            {
+                if (itemObject.GetType() != typeof(MenuItem))
+                    continue;
+
+                MenuItem menuItem   = (MenuItem)itemObject;
+                menuItem.Tag        = item;
+                switch (menuItem.Name)
+                {
+                    case "MenuItemScrollToMatchingFoundItem":
+                        menuItem.Click += ButtonScrollToMatchingFoundItem_Click;
+                        break;
+                    case "MenuItemCopyStoredItemID":
+                        menuItem.Click += ButtonCopyFoundItemID_Click;
+                        break;
+                }
+            }
+
+            itemRightClickMenu.Placement    = System.Windows.Controls.Primitives.PlacementMode.MousePoint;
+            itemRightClickMenu.IsOpen       = true;
         }
 
         /// <summary>
@@ -185,7 +216,7 @@ namespace WLO_Translator_WPF
         /// </summary>
         private void UpdateRightClickMenuAndItemButtons()
         {
-            ContextMenu itemRightClickMenu = (ContextMenu)FindResource("ItemRightClickMenu");
+            ContextMenu itemRightClickMenu = (ContextMenu)FindResource("FoundItemRightClickMenu");
 
             if (FileManager.FileItemProperties.HasExtras)
             {
@@ -231,7 +262,7 @@ namespace WLO_Translator_WPF
             ItemSearch.UpdateStoredAndFoundItemsWhileSearchingLists(ref ListBoxFoundItems, ref ListBoxStoredItems);
         }
 
-        private Item GetSelectedItem(object sender)
+        private Item GetSelectedFoundItem(object sender)
         {
             Item item;
             if ((sender as FrameworkElement).Tag != null)
@@ -242,9 +273,22 @@ namespace WLO_Translator_WPF
             return item;
         }
 
+        private Item GetSelectedStoredItem(object sender)
+        {
+            Item item;
+            if ((sender as FrameworkElement).Tag != null)
+                item = (sender as FrameworkElement).Tag as Item;
+            else
+                item = ListBoxStoredItems.SelectedItem as Item;
+
+            return item;
+        }
+
+        // Found right-click menu items
+
         private void ButtonUpdateItemBasedOnNameLength_Click(object sender, RoutedEventArgs e)
         {
-            Item item = GetSelectedItem(sender);
+            Item item = GetSelectedFoundItem(sender);
             if (item == null)
                 return;
 
@@ -254,7 +298,7 @@ namespace WLO_Translator_WPF
 
         private void ButtonJumpToWholeItem_Click(object sender, RoutedEventArgs e)
         {
-            Item item = GetSelectedItem(sender);
+            Item item = GetSelectedFoundItem(sender);
             if (item == null)
                 return;
 
@@ -266,7 +310,7 @@ namespace WLO_Translator_WPF
 
         private void ButtonJumpToID_Click(object sender, RoutedEventArgs e)
         {
-            Item item = GetSelectedItem(sender);
+            Item item = GetSelectedFoundItem(sender);
             if (item == null)
                 return;
 
@@ -278,7 +322,7 @@ namespace WLO_Translator_WPF
 
         private void ButtonJumpToName_Click(object sender, RoutedEventArgs e)
         {
-            Item item = GetSelectedItem(sender);
+            Item item = GetSelectedFoundItem(sender);
             if (item == null)
                 return;
 
@@ -290,7 +334,7 @@ namespace WLO_Translator_WPF
 
         private void ButtonJumpToDescription_Click(object sender, RoutedEventArgs e)
         {
-            Item item = GetSelectedItem(sender);
+            Item item = GetSelectedFoundItem(sender);
             if (item == null)
                 return;
 
@@ -302,7 +346,7 @@ namespace WLO_Translator_WPF
 
         private void ButtonJumpToExtra1_Click(object sender, RoutedEventArgs e)
         {
-            Item item = GetSelectedItem(sender);
+            Item item = GetSelectedFoundItem(sender);
             if (item == null)
                 return;
 
@@ -314,7 +358,7 @@ namespace WLO_Translator_WPF
 
         private void ButtonJumpToExtra2_Click(object sender, RoutedEventArgs e)
         {
-            Item item = GetSelectedItem(sender);
+            Item item = GetSelectedFoundItem(sender);
             if (item == null)
                 return;
 
@@ -324,9 +368,36 @@ namespace WLO_Translator_WPF
             ListBoxFoundItems.SelectedItem = item;
         }
 
-        private void ButtonCopyItemID_Click(object sender, RoutedEventArgs e)
+        private void ButtonCopyFoundItemID_Click(object sender, RoutedEventArgs e)
         {
-            Item item = GetSelectedItem(sender);
+            Item item = GetSelectedFoundItem(sender);
+            if (item == null)
+                return;
+
+            Clipboard.SetText(item.TextBlockID.Text);
+        }
+
+        // Stored right-click menu items
+
+        private void ButtonScrollToMatchingFoundItem_Click(object sender, RoutedEventArgs e)
+        {
+            Item item = GetSelectedStoredItem(sender);
+            if (item == null)
+                return;
+
+            ListBoxStoredItems.SelectedItem = item;
+
+            Item itemFound = ListBoxFoundItems.ItemsSource.OfType<Item>().First((Item foundItem) => { return Item.CompareIDs(foundItem.ID, item.ID); });
+
+            if (itemFound == null) return;
+
+            ListBoxFoundItems.SelectedItem  = itemFound;
+            ListBoxFoundItems.ScrollIntoView(itemFound);
+        }
+
+        private void ButtonCopyStoredItemID_Click(object sender, RoutedEventArgs e)
+        {
+            Item item = GetSelectedStoredItem(sender);
             if (item == null)
                 return;
 
@@ -471,27 +542,27 @@ namespace WLO_Translator_WPF
             switch (selectedEncoding)
             {
                 case "ANSI":
-                    unicodeFont = new FontFamily("Courier New");
-                    encoding = Encoding.GetEncoding(1252);
+                    unicodeFont                 = new FontFamily("Courier New");
+                    encoding                    = Encoding.GetEncoding(1252);
                     scintillaTextBox.FontFamily = unicodeFont;
                     break;
                 case "Unicode":
-                    unicodeFont = new FontFamily("Segoi UI");
-                    encoding = Encoding.Unicode;
+                    unicodeFont                 = new FontFamily("Segoi UI");
+                    encoding                    = Encoding.Unicode;
                     scintillaTextBox.FontFamily = unicodeFont;
                     break;
                 case "UTF8":
-                    unicodeFont = new FontFamily("Segoi UI");
-                    encoding = Encoding.UTF8;
+                    unicodeFont                 = new FontFamily("Segoi UI");
+                    encoding                    = Encoding.UTF8;
                     scintillaTextBox.FontFamily = unicodeFont;
                     break;
                 case "GB2312":
-                    unicodeFont = new FontFamily("SimHei");
-                    encoding = Encoding.GetEncoding("gb2312");
+                    unicodeFont                 = new FontFamily("SimHei");
+                    encoding                    = Encoding.GetEncoding("gb2312");
                     break;
                 case "BIG5":
-                    unicodeFont = new FontFamily("SimHei");
-                    encoding = Encoding.GetEncoding("big5");
+                    unicodeFont                 = new FontFamily("SimHei");
+                    encoding                    = Encoding.GetEncoding("big5");
                     break;
                 default:
                     throw new Exception("Encoding \"" + selectedEncoding + "\" is not found");

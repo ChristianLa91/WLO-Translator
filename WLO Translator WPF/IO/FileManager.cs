@@ -1,4 +1,5 @@
-﻿using Microsoft.Win32;
+﻿using ExcelDataReader;
+using Microsoft.Win32;
 using MiniExcelLibs;
 using ScintillaNET.WPF;
 using System;
@@ -116,7 +117,7 @@ namespace WLO_Translator_WPF
         private BackgroundWorker            mBackgroundWorkerFoundItemData;
         private List<ItemData>              mFoundItemsToAdd;
         private List<ItemData>              mStoredItemsToAdd;
-        private List<ItemALoginData>        mStoredALoginItemsToAdd;
+        private List<ItemALoginData>        mALoginItemsToAdd;
         public  List<ItemData>              GetFoundItems()     { return mFoundItemsToAdd; }
         public  List<ItemData>              GetStoredItems()    { return mStoredItemsToAdd; }
 
@@ -355,7 +356,7 @@ namespace WLO_Translator_WPF
             // Load program settings, if file exists
             if (File.Exists(Paths.ProgramSettingsPath))
             {
-                mStoredItemsToAdd = new List<ItemData>();
+                //mStoredItemsToAdd = new List<ItemData>();
                 XmlReader reader = XmlReader.Create(Paths.ProgramSettingsPath);
 
                 try
@@ -408,7 +409,7 @@ namespace WLO_Translator_WPF
         /// Saves the associated stored item data into an XML-file. This is the data meant to hold all the
         /// translations of the already translated files.
         /// </summary>
-        public  void SaveStoredItemData(FileType fileName, List<IItemBase> storedItems)
+        public void SaveStoredItemData(FileType fileName, List<IItemBase> storedItems)
         {
             string saveFilePath = Paths.AssociatedStoredItemData + TextManager.GetFileTypeToString(fileName);
             string saveFilePathWithExtension = saveFilePath + Constants.FILE_ENDING_STORED_ITEM_DATA;
@@ -493,9 +494,9 @@ namespace WLO_Translator_WPF
             // Load last saved data, if file exists
             if (File.Exists(savefilePath))
             {
-                mStoredItemsToAdd = new List<ItemData>();
-                List<ItemData> storedItemsToAdd = new List<ItemData>();
-                XmlReader reader = XmlReader.Create(savefilePath);
+                mStoredItemsToAdd                   = new List<ItemData>();
+                List<ItemData>  storedItemsToAdd    = new List<ItemData>();
+                XmlReader       reader              = XmlReader.Create(savefilePath);
 
                 try
                 {
@@ -532,53 +533,53 @@ namespace WLO_Translator_WPF
                                     int.Parse(reader.GetAttribute("ID2")), 0};
 
                             if (reader.GetAttribute("Name") != null)
-                                currentItemData.Name = reader.GetAttribute("Name");
+                                currentItemData.Name        = reader.GetAttribute("Name");
 
                             if (reader.GetAttribute("Description") != null)
                                 currentItemData.Description = reader.GetAttribute("Description");
 
                             if (reader.GetAttribute("Extra1") != null)
-                                currentItemData.Extra1 = reader.GetAttribute("Extra1");
+                                currentItemData.Extra1      = reader.GetAttribute("Extra1");
 
                             if (reader.GetAttribute("Extra2") != null)
-                                currentItemData.Extra2 = reader.GetAttribute("Extra2");
+                                currentItemData.Extra2      = reader.GetAttribute("Extra2");
 
                             // Positions
                             if (reader.GetAttribute("ItemStartPosition") != null)
-                                currentItemData.ItemStartPosition = int.Parse(reader.GetAttribute("ItemStartPosition"));
+                                currentItemData.ItemStartPosition           = int.Parse(reader.GetAttribute("ItemStartPosition"));
 
                             if (reader.GetAttribute("ItemEndPosition") != null)
-                                currentItemData.ItemEndPosition = int.Parse(reader.GetAttribute("ItemEndPosition"));
+                                currentItemData.ItemEndPosition             = int.Parse(reader.GetAttribute("ItemEndPosition"));
 
                             if (reader.GetAttribute("IDStartPosition") != null)
-                                currentItemData.IDStartPosition = int.Parse(reader.GetAttribute("IDStartPosition"));
+                                currentItemData.IDStartPosition             = int.Parse(reader.GetAttribute("IDStartPosition"));
 
                             if (reader.GetAttribute("IDEndPosition") != null)
-                                currentItemData.IDEndPosition = int.Parse(reader.GetAttribute("IDEndPosition"));
+                                currentItemData.IDEndPosition               = int.Parse(reader.GetAttribute("IDEndPosition"));
 
                             if (reader.GetAttribute("NameStartPosition") != null)
-                                currentItemData.NameStartPosition = int.Parse(reader.GetAttribute("NameStartPosition"));
+                                currentItemData.NameStartPosition           = int.Parse(reader.GetAttribute("NameStartPosition"));
 
                             if (reader.GetAttribute("NameEndPosition") != null)
-                                currentItemData.NameEndPosition = int.Parse(reader.GetAttribute("NameEndPosition"));
+                                currentItemData.NameEndPosition             = int.Parse(reader.GetAttribute("NameEndPosition"));
 
                             if (reader.GetAttribute("DescriptionStartPosition") != null)
-                                currentItemData.DescriptionStartPosition = int.Parse(reader.GetAttribute("DescriptionStartPosition"));
+                                currentItemData.DescriptionStartPosition    = int.Parse(reader.GetAttribute("DescriptionStartPosition"));
 
                             if (reader.GetAttribute("DescriptionEndPosition") != null)
-                                currentItemData.DescriptionEndPosition = int.Parse(reader.GetAttribute("DescriptionEndPosition"));
+                                currentItemData.DescriptionEndPosition      = int.Parse(reader.GetAttribute("DescriptionEndPosition"));
 
                             if (reader.GetAttribute("Extra1StartPosition") != null)
-                                currentItemData.Extra1StartPosition = int.Parse(reader.GetAttribute("Extra1StartPosition"));
+                                currentItemData.Extra1StartPosition         = int.Parse(reader.GetAttribute("Extra1StartPosition"));
 
                             if (reader.GetAttribute("Extra1EndPosition") != null)
-                                currentItemData.Extra1EndPosition = int.Parse(reader.GetAttribute("Extra1EndPosition"));
+                                currentItemData.Extra1EndPosition           = int.Parse(reader.GetAttribute("Extra1EndPosition"));
 
                             if (reader.GetAttribute("Extra2StartPosition") != null)
-                                currentItemData.Extra2StartPosition = int.Parse(reader.GetAttribute("Extra2StartPosition"));
+                                currentItemData.Extra2StartPosition         = int.Parse(reader.GetAttribute("Extra2StartPosition"));
 
                             if (reader.GetAttribute("Extra2EndPosition") != null)
-                                currentItemData.Extra2EndPosition = int.Parse(reader.GetAttribute("Extra2EndPosition"));
+                                currentItemData.Extra2EndPosition           = int.Parse(reader.GetAttribute("Extra2EndPosition"));
 
                             // Get nulls left
                             if (isMultiTranslator)
@@ -661,7 +662,7 @@ namespace WLO_Translator_WPF
                     LoadedFileName = FileType.ACTIONINFO;
                     break;
                 case "alogin":
-                    LoadedFileName = FileType.ALOGINEXE;
+                    LoadedFileName = FileType.ALOGINEXE;                    
                     break;
                 case "item":
                     LoadedFileName = FileType.ITEM;
@@ -687,6 +688,12 @@ namespace WLO_Translator_WPF
             }
 
             FileItemProperties = new FileItemProperties(LoadedFileName);
+
+            if (LoadedFileName == FileType.ALOGINEXE)
+            {
+                if (!ImportItemsFromExcelDocument(""))
+                    return false;
+            }
 
             // Load in text from file
             string fileText = File.ReadAllText(filePath, Encoding.GetEncoding(1252));
@@ -718,11 +725,11 @@ namespace WLO_Translator_WPF
             }
 
             // Extract item data from the loaded file
-            mBackgroundWorkerFoundItemData = new BackgroundWorker(); // () => ThreadOpenFileToTranslate(fileName)
-            mBackgroundWorkerFoundItemData.WorkerReportsProgress = true;
-            mBackgroundWorkerFoundItemData.DoWork += BackgroundWorkerFoundItemData_DoWork;
-            mBackgroundWorkerFoundItemData.ProgressChanged += BackgroundWorkerFoundItemData_ProgressChanged;
-            mBackgroundWorkerFoundItemData.RunWorkerCompleted += BackgroundWorkerFoundItemData_RunWorkerCompleted;
+            mBackgroundWorkerFoundItemData                          = new BackgroundWorker(); // () => ThreadOpenFileToTranslate(fileName)
+            mBackgroundWorkerFoundItemData.WorkerReportsProgress    = true;
+            mBackgroundWorkerFoundItemData.DoWork                  += BackgroundWorkerFoundItemData_DoWork;
+            mBackgroundWorkerFoundItemData.ProgressChanged         += BackgroundWorkerFoundItemData_ProgressChanged;
+            mBackgroundWorkerFoundItemData.RunWorkerCompleted      += BackgroundWorkerFoundItemData_RunWorkerCompleted;
             mBackgroundWorkerFoundItemData.RunWorkerAsync(new object[] { filePath, isMultiTranslator });
 
             return true;
@@ -745,7 +752,7 @@ namespace WLO_Translator_WPF
             if (FileItemProperties.FileType != FileType.ALOGINEXE)
                 CollectFoundItemDataAsync(fileName, isMultiTranslator).Wait();
             else
-                CollectFoundALoginDataAsync(fileName, isMultiTranslator).Wait();
+                CollectALoginDataAsync(fileName, mFoundItemsToAdd, false, isMultiTranslator).Wait();
 
             e.Result = new object[] { fileName, isMultiTranslator };
         }
@@ -773,9 +780,9 @@ namespace WLO_Translator_WPF
             Thread.Sleep(50);
 
             // Load Data
-            FileStream fileStream = File.OpenRead(fileName);
-            byte[] bytes = new byte[fileStream.Length];
-            int readBytesAmount = fileStream.Read(bytes, 0, (int)fileStream.Length);
+            FileStream  fileStream      = File.OpenRead(fileName);
+            byte[]      bytes           = new byte[fileStream.Length];
+            int         readBytesAmount = fileStream.Read(bytes, 0, (int)fileStream.Length);
 
             mFoundItemsToAdd = new List<ItemData>();
             List<ItemData> foundItemsToAdd = new List<ItemData>();
@@ -794,22 +801,22 @@ namespace WLO_Translator_WPF
             switch (FileItemProperties.FileType)
             {
                 case FileType.ACTIONINFO:
-                    startOffset = FileItemProperties.LengthPerItem + Constants.ACTIONINFO_DATA_INITIAL_OFFSET;
-                    idOffset = Constants.ACTIONINFO_DATA_ID_OFFSET;
+                    startOffset     = FileItemProperties.LengthPerItem + Constants.ACTIONINFO_DATA_INITIAL_OFFSET;
+                    idOffset        = Constants.ACTIONINFO_DATA_ID_OFFSET;
                     break;
                 case FileType.ALOGINEXE:
-                    startOffset = 0;
+                    startOffset     = 0;
                     break;
                 case FileType.SCENEDATA:
-                    startOffset = FileItemProperties.LengthPerItem + Constants.SCENEDATA_DATA_INITIAL_OFFSET;
-                    idOffset = Constants.SCENEDATA_DATA_ID_OFFSET;
+                    startOffset     = FileItemProperties.LengthPerItem + Constants.SCENEDATA_DATA_INITIAL_OFFSET;
+                    idOffset        = Constants.SCENEDATA_DATA_ID_OFFSET;
                     break;
                 case FileType.TALK:
-                    startOffset = FileItemProperties.LengthPerItem + Constants.TALK_DATA_INITIAL_OFFSET;
-                    idOffset = Constants.TALK_DATA_ID_OFFSET;
+                    startOffset     = FileItemProperties.LengthPerItem + Constants.TALK_DATA_INITIAL_OFFSET;
+                    idOffset        = Constants.TALK_DATA_ID_OFFSET;
                     break;
                 default:
-                    startOffset = FileItemProperties.LengthPerItem;
+                    startOffset     = FileItemProperties.LengthPerItem;
                     break;
             }
 
@@ -878,8 +885,8 @@ namespace WLO_Translator_WPF
             // Get result
             List<ItemData> result;
             itemDataTasks.Reverse();
-            int progress = 0;
-            int taskIndex = 0;
+            int progress    = 0;
+            int taskIndex   = 0;
             foreach (Task<List<ItemData>> task in itemDataTasks)
             {
                 result = await task;
@@ -888,12 +895,7 @@ namespace WLO_Translator_WPF
                 foreach (ItemData itemData in result)
                 {
                     if (itemData != null)
-                    {
                         foundItemsToAdd.Add(itemData);
-                        //Console.WriteLine("Completed Collection of Found Item With Name: " + itemData.Name);
-                    }
-                    //else
-                    //Console.WriteLine("Uncompleted Collection of Item");
                 }
                 progress += dataPerTask;
                 if (progress >= bytes.Length / 5)
@@ -909,66 +911,78 @@ namespace WLO_Translator_WPF
         }
 
         /// <summary>
-        /// Task (thread) function that asynchronically handles the found item data collection.
+        /// Task (thread) function that asynchronically handles the found aLogin data collection.
         /// </summary>
-        public async Task CollectFoundALoginDataAsync(string fileName, bool isMultiTranslator)
+        public async Task CollectALoginDataAsync(string fileName, List<ItemData> itemsToAdd, bool isStoredItems, bool isMultiTranslator)
         {
             Thread.Sleep(50);
 
+            string type = "Found";
+            if (isStoredItems)
+                type = "Stored";
+
             // Load Data
-            FileStream  fileStream      = File.OpenRead(fileName);
-            byte[]      bytes           = new byte[fileStream.Length];
-            int         readBytesAmount = fileStream.Read(bytes, 0, (int)fileStream.Length);
+            FileStream  fileStream          = File.OpenRead(fileName);
+            byte[]      bytes               = new byte[fileStream.Length];
+            int         readBytesAmount     = fileStream.Read(bytes, 0, (int)fileStream.Length);
 
-            mFoundItemsToAdd = new List<ItemData>();
-            List<ItemData> foundItemsToAdd = new List<ItemData>();
+            itemsToAdd = new List<ItemData>();
+            List<ItemData> itemsToAddTemporary  = new List<ItemData>();
 
+            // Initialize Loading Bar
             mDispatcher.Invoke(() =>
             {
-                LoadingBarManager.ShowOrInitializeLoadingBar("Found", 0d, FileItemProperties, bytes.Length);
+                LoadingBarManager.ShowOrInitializeLoadingBar(type, 0d, FileItemProperties, bytes.Length);
                 mOpenFileData = bytes;
             });
 
             LoadingBarManager.WaitUntilValueHasChanged();
 
-            int startOffset = 0, idOffset = 0;
-            DateTime lastReportedTime = DateTime.Now;
+            GenerateItemDataForALogin(ref bytes, ref itemsToAddTemporary, isStoredItems, isMultiTranslator);                     
+        }
 
-            //TODO: Load in data with excel reader
+        private void GenerateItemDataForALogin(ref byte[] bytes, ref List<ItemData> itemDataResult, bool isStoredItems,
+            bool isMultiTranslator)
+        {
+            int progress, progressReportDelta = bytes.Length / 5, progressReportThreshold = progressReportDelta, index = 0;
 
-            //ImportItemsFromExcelDocument("")
+            foreach (ItemALoginData itemALoginData in mALoginItemsToAdd)
+            {
+                int itemEndPosition = itemALoginData.ItemStartPosition + itemALoginData.TextOriginalLength;
 
-            // Get result
-            //List<ItemData> result;
-            //itemDataTasks.Reverse();
-            //int progress = 0;
-            //int taskIndex = 0;
-            //foreach (Task<List<ItemData>> task in itemDataTasks)
-            //{
-            //    result = await task;
-            //    if (task.Exception != null)
-            //        MessageBox.Show("Task Exception: " + task.Exception.Message);
-            //    foreach (ItemData itemData in result)
-            //    {
-            //        if (itemData != null)
-            //        {
-            //            foundItemsToAdd.Add(itemData);
-            //            //Console.WriteLine("Completed Collection of Found Item With Name: " + itemData.Name);
-            //        }
-            //        //else
-            //        //Console.WriteLine("Uncompleted Collection of Item");
-            //    }
-            //    progress += dataPerTask;
-            //    if (progress >= bytes.Length / 5)
-            //    {
-            //        ReportProgress(ref foundItemsToAdd, progress, isMultiTranslator, false);
-            //        progress = 0;
-            //    }
-            //    task.Dispose();
-            //    ++taskIndex;
-            //}
+                // Collect item found data
+                ItemData itemData               = new ItemData();
+                itemData.ItemStartPosition      = itemData.NameStartPosition = itemALoginData.ItemStartPosition;
+                string idString                 = itemData.ItemStartPosition.ToString("000000000");
+                itemData.ID                     = new int[] { int.Parse(idString.Substring(0, 3)), int.Parse(idString.Substring(3, 3)),
+                    int.Parse(idString.Substring(6, 3)) };
 
-            ReportProgress(ref foundItemsToAdd, bytes.Length, isMultiTranslator, false);
+                if (!isStoredItems)
+                itemData.Name                   = TextManager.GetSubstringFromBytes(ref bytes, itemALoginData.ItemStartPosition,
+                    itemALoginData.TextOriginal.Length);
+                else
+                    itemData.Name = itemALoginData.TextReplace;
+
+                itemData.ItemEndPosition        = itemData.NameEndPosition = itemEndPosition;
+
+                itemDataResult.Add(itemData);
+
+                // Set and report progress
+                if (index == mALoginItemsToAdd.Count - 1)
+                    progress = bytes.Length;
+                else
+                    progress = itemEndPosition;
+
+                if (progress >= progressReportThreshold)
+                {
+                    ReportProgress(ref itemDataResult, progress, isMultiTranslator, isStoredItems);
+                    progressReportThreshold += progressReportDelta;
+                }
+
+                ++index;
+            }
+
+            ReportProgress(ref itemDataResult, bytes.Length, isMultiTranslator, isStoredItems);
         }
 
         /// <summary>
@@ -1035,13 +1049,20 @@ namespace WLO_Translator_WPF
         private void BackgroundWorkerStoredItemData_DoWork(object sender, DoWorkEventArgs e)
         {
             object[] arguments = e.Argument as object[];
+            bool isMultiTranslator = (bool)arguments[1];
 
             while (!LoadingBarManager.IsLoadingCompleted()/*!IsFoundItemDataCollectionCompleted*/)
                 Thread.Sleep(Constants.LOADING_SLEEP_LENGTH);
 
             Console.WriteLine("Loading Stored Item Data");
 
-            LoadStoredItemData(arguments[0] as string, (bool)arguments[1]);
+            if (FileItemProperties.FileType == FileType.ALOGINEXE)
+            {
+                CollectALoginDataAsync(arguments[0] as string, mStoredItemsToAdd, true, isMultiTranslator).Wait();
+                mALoginItemsToAdd.Clear();
+            }
+            else
+                LoadStoredItemData(arguments[0] as string, isMultiTranslator);
 
             e.Result = arguments[1];
         }
@@ -1201,12 +1222,12 @@ namespace WLO_Translator_WPF
         public void CloseFileToTranslateOrGrabTranslationsFrom()
         {
             // Load in text from file
-            mScintillaWPFTextBox.ReadOnly = false;
+            mScintillaWPFTextBox.ReadOnly       = false;
             mScintillaWPFTextBox.Scintilla.Text = "";
-            mScintillaWPFTextBox.ReadOnly = true;
-            mListBoxFoundItems.ItemsSource = new ObservableCollection<Item>();
-            mListBoxStoredItems.ItemsSource = new ObservableCollection<Item>();
-            FileItemProperties = null;
+            mScintillaWPFTextBox.ReadOnly       = true;
+            mListBoxFoundItems.ItemsSource      = new ObservableCollection<Item>();
+            mListBoxStoredItems.ItemsSource     = new ObservableCollection<Item>();
+            FileItemProperties                  = null;
 
             ItemSearch.ClearStoredItemsWhileSearching();
 
@@ -1249,7 +1270,7 @@ namespace WLO_Translator_WPF
                     try
                     {
                         Thread.Sleep(50 + random.Next(0, 50));
-                        List<int> indice = indiceStack.Pop();
+                        List<int> indice = indiceStack.Pop( );
                         tasks.Add(Task.Run(() =>
                         {
                             try
@@ -1423,10 +1444,10 @@ namespace WLO_Translator_WPF
             if (FileItemProperties.FileType == FileType.NULL)
                 return;
 
-            SaveFileDialog saveFileDialog = new SaveFileDialog();
-            saveFileDialog.DefaultExt = ".xlsx";
-            saveFileDialog.Filter = "Excel File|.xlsx";
-            saveFileDialog.Title = "Export " + typeOfItems + " Item Data as Excel File";
+            SaveFileDialog saveFileDialog   = new SaveFileDialog();
+            saveFileDialog.DefaultExt       = ".xlsx";
+            saveFileDialog.Filter           = "Excel File|.xlsx";
+            saveFileDialog.Title            = "Export " + typeOfItems + " Item Data as Excel File";
 
             if (saveFileDialog.ShowDialog() == true)
             {
@@ -1447,51 +1468,65 @@ namespace WLO_Translator_WPF
         /// <summary>
         /// Imports items into the provided listBox to a path chosen by the user as an excel-document.
         /// </summary>
-        public void ImportItemsFromExcelDocument(string path, ref ListBox listBox, bool isMultiTranslator)
+        public bool ImportItemsFromExcelDocument(string path)
         {
             if (FileItemProperties.FileType == FileType.NULL)
-                return;
+                return false;
+
+            mALoginItemsToAdd = new List<ItemALoginData>();
 
             OpenFileDialog openFileDialog   = new OpenFileDialog();
-            openFileDialog.DefaultExt       = ".xlsx";
-            openFileDialog.Filter           = "Excel File|.xlsx";
+            openFileDialog.DefaultExt       = "*.xlsx";
+            openFileDialog.Filter           = "Excel File|*.xlsx";
             openFileDialog.Title            = "Import Items from Excel File";
 
-            if (openFileDialog.ShowDialog() == true)
+            if (path == "" || path == null)
             {
-                MiniExcelDataReader excelDataReader = MiniExcel.GetReader(openFileDialog.FileName, false, null, ExcelType.UNKNOWN, "B1");
-
-                while (excelDataReader.Read())
-                {
-                    ItemALoginData itemALoginData = new ItemALoginData();
-
-                    string idString = excelDataReader.GetString(0);
-
-                    //HEX-ID, text, text, char max-length?, char max-length, nothing, Mixed bytes type!
-                    itemALoginData.Text1StartPosition = excelDataReader.GetInt32(0);
-                    itemALoginData.Text1    = excelDataReader.GetString(1);
-                    itemALoginData.Text2    = excelDataReader.GetString(2);
-
-                    // Positions
-                    //currentItemData.ItemStartPosition           = int.Parse(reader.GetAttribute("ItemStartPosition"));
-                    //currentItemData.ItemEndPosition             = int.Parse(reader.GetAttribute("ItemEndPosition"));
-                    //currentItemData.IDStartPosition             = int.Parse(reader.GetAttribute("IDStartPosition"));
-                    //currentItemData.IDEndPosition               = int.Parse(reader.GetAttribute("IDEndPosition"));
-                    //currentItemData.NameStartPosition           = int.Parse(reader.GetAttribute("NameStartPosition"));
-                    //currentItemData.NameEndPosition             = int.Parse(reader.GetAttribute("NameEndPosition"));
-                    //currentItemData.DescriptionStartPosition    = int.Parse(reader.GetAttribute("DescriptionStartPosition"));
-                    //currentItemData.DescriptionEndPosition      = int.Parse(reader.GetAttribute("DescriptionEndPosition"));
-                    //currentItemData.Extra1StartPosition         = int.Parse(reader.GetAttribute("Extra1StartPosition"));
-                    //currentItemData.Extra1EndPosition           = int.Parse(reader.GetAttribute("Extra1EndPosition"));
-                    //currentItemData.Extra2StartPosition         = int.Parse(reader.GetAttribute("Extra2StartPosition"));
-                    //currentItemData.Extra2EndPosition           = int.Parse(reader.GetAttribute("Extra2EndPosition"));
-
-
-                    mStoredALoginItemsToAdd.Add(itemALoginData);
-                }
-
-                //mLabelReportInfo.Content = "Export Stored Items as an Excel Document at \"" + openFileDialog.FileName + "\"";
+                if (openFileDialog.ShowDialog() == true)
+                    path = openFileDialog.FileName;
             }
+
+            if (File.Exists(path))
+            {
+                try
+                {
+                    IExcelDataReader excelDataReader = ExcelReaderFactory.CreateOpenXmlReader(openFileDialog.OpenFile());
+                    excelDataReader.Read();
+                    while (excelDataReader.Read())
+                    {
+                        ItemALoginData itemALoginData = new ItemALoginData();
+
+                        //HEX-ID, text, text, char max-length?, char max-length, nothing, Mixed bytes type!
+                        itemALoginData.ItemStartPosition            = (int)excelDataReader.GetDouble(0);
+                        itemALoginData.TextOriginalOriginalEncoding = excelDataReader.GetString(1);
+
+                        if (itemALoginData.TextOriginalOriginalEncoding != null)
+                            itemALoginData.TextOriginal             = TextManager.GetStringWithEncoding(
+                                itemALoginData.TextOriginalOriginalEncoding, TextManager.GetEncoding(TextManager.EncodingTypes.ANSI));
+                        itemALoginData.TextReplaceOriginalEncoding  = excelDataReader.GetString(2);
+
+                        if (itemALoginData.TextReplaceOriginalEncoding != null)
+                            itemALoginData.TextReplace              = TextManager.GetStringWithEncoding(
+                                itemALoginData.TextReplaceOriginalEncoding, TextManager.GetEncoding(TextManager.EncodingTypes.ANSI));
+
+                        itemALoginData.TextReplaceLength            = (int)excelDataReader.GetDouble(3);
+                        itemALoginData.TextOriginalLength           = (int)excelDataReader.GetDouble(4);
+
+                        mALoginItemsToAdd.Add(itemALoginData);
+
+                    }
+
+                    //mLabelReportInfo.Content = "Export Stored Items as an Excel Document at \"" + openFileDialog.FileName + "\"";
+                    return true;
+                }
+                catch (Exception)
+                {
+                    Console.WriteLine("Failed to read the file " + path);
+                    return false;
+                }
+            }
+
+            return false;
         }
 
         #endregion

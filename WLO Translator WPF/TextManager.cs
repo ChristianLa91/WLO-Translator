@@ -10,6 +10,45 @@ namespace WLO_Translator_WPF
     /// </summary>
     public static class TextManager
     {
+        public enum EncodingTypes
+        {
+            ANSI,
+            UNICODE,
+            UTF8,
+            GB2312,
+            BIG5
+        }
+
+        public static Encoding GetEncoding(EncodingTypes encodingType)
+        {
+            switch (encodingType)
+            {
+                case EncodingTypes.ANSI:
+                    return Encoding.GetEncoding(1252);
+                case EncodingTypes.UNICODE:
+                    return Encoding.Unicode;
+                case EncodingTypes.UTF8:
+                    return Encoding.UTF8;
+                case EncodingTypes.GB2312:
+                    return Encoding.GetEncoding("gb2312");
+                case EncodingTypes.BIG5:
+                    return Encoding.GetEncoding("big5");
+                default:
+                    return null;
+            }
+        }
+
+        public static string GetSubstringFromBytes(ref byte[] bytes, int index, int length)
+        {
+            string result = "";
+            for (int i = index; i < index + length + 1; ++i)
+            {
+                result += (char)bytes[i];
+            }
+
+            return result;
+        }
+
         public static string GetStringWithEncoding(string text, Encoding encoding)
         {
             // Get text to new encoding from original encoding
@@ -18,6 +57,9 @@ namespace WLO_Translator_WPF
 
         public static string ReverseString(string s)
         {
+            if (s == null)
+                return null;
+
             char[] charArray = s.ToCharArray();
             Array.Reverse(charArray);
             return new string(charArray);
@@ -182,6 +224,9 @@ namespace WLO_Translator_WPF
             {
                 case FileType.ACTIONINFO:
                     result = "ActionInfo";
+                    break;
+                case FileType.ALOGINEXE:
+                    result = "ALogin";
                     break;
                 case FileType.ITEM:
                     result = "Item";
